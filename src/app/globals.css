@@ -8,30 +8,34 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    /* Light Gray (#F5F5F5) */
+    --background: 0 0% 96.1%;
+    /* Dark Gray (#333333) */
+    --foreground: 0 0% 20%;
+    --card: 0 0% 96.1%; /* Match background */
+    --card-foreground: 0 0% 20%; /* Match foreground */
+    --popover: 0 0% 96.1%; /* Match background */
+    --popover-foreground: 0 0% 20%; /* Match foreground */
+    /* Teal (#008080) as primary/accent */
+    --primary: 180 100% 25.1%;
+    --primary-foreground: 0 0% 98%; /* Keep high contrast */
+    --secondary: 0 0% 90%; /* Slightly darker gray for secondary elements */
+    --secondary-foreground: 0 0% 20%; /* Match foreground */
+    --muted: 0 0% 90%; /* Use secondary for muted */
+    --muted-foreground: 0 0% 45.1%; /* Lighter gray for muted text */
+    /* Teal (#008080) as accent */
+    --accent: 180 100% 25.1%;
+    --accent-foreground: 0 0% 98%; /* High contrast for accent */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --border: 0 0% 89.8%; /* Light border */
+    --input: 0 0% 89.8%; /* Match border for input */
+    --ring: 180 100% 25.1%; /* Teal for focus rings */
+    --chart-1: 180 100% 25.1%; /* Teal */
+    --chart-2: 180 80% 35%; /* Lighter Teal */
+    --chart-3: 0 0% 50%; /* Mid Gray */
+    --chart-4: 0 0% 70%; /* Lighter Gray */
+    --chart-5: 0 0% 30%; /* Darker Gray */
     --radius: 0.5rem;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -43,30 +47,34 @@ body {
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    /* Provide a basic dark theme fallback if needed, adjust as necessary */
+    --background: 0 0% 10%; /* Dark background */
+    --foreground: 0 0% 95%; /* Light foreground */
+    --card: 0 0% 15%; /* Slightly lighter dark card */
+    --card-foreground: 0 0% 95%; /* Match foreground */
+    --popover: 0 0% 15%; /* Match card */
+    --popover-foreground: 0 0% 95%; /* Match foreground */
+    /* Teal (#008080) adjusted for dark mode */
+    --primary: 180 70% 50%;
+    --primary-foreground: 0 0% 10%; /* Dark text on primary */
+    --secondary: 0 0% 25%; /* Darker secondary */
+    --secondary-foreground: 0 0% 95%; /* Match foreground */
+    --muted: 0 0% 25%; /* Match secondary */
+    --muted-foreground: 0 0% 63.9%; /* Lighter muted text */
+    /* Teal (#008080) adjusted for dark mode */
+    --accent: 180 70% 50%;
+    --accent-foreground: 0 0% 10%; /* Dark text on accent */
+    --destructive: 0 70% 50%; /* Adjust destructive */
+    --destructive-foreground: 0 0% 95%;
+    --border: 0 0% 30%; /* Darker border */
+    --input: 0 0% 30%; /* Match border */
+    --ring: 180 70% 50%; /* Teal ring */
+    --chart-1: 180 70% 50%; /* Teal */
+    --chart-2: 180 60% 60%; /* Lighter Teal */
+    --chart-3: 0 0% 70%; /* Lighter Gray */
+    --chart-4: 0 0% 50%; /* Mid Gray */
+    --chart-5: 0 0% 80%; /* Very Light Gray */
+    --radius: 0.5rem;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
