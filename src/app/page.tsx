@@ -5,12 +5,12 @@ import { CvOptimizerForm } from '@/components/cv-optimizer-form';
 import { CvAnalysisResults } from '@/components/cv-analysis-results';
 import { GeneratedCvDisplay } from '@/components/generated-cv-display';
 import { GeneratedCoverLetterDisplay } from '@/components/generated-cover-letter-display'; // Import new component
-import type { AnalyzeCvOutput } from '@/ai/flows/cv-analyzer'; // Import the type
+import type { AnalyzeCvOutput } from '@/ai/flows/cv-analyzer'; // Type remains the same, structure inside changed
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 
 export default function Home() {
-  // State for analysis
+  // State for analysis - uses the full AnalyzeCvOutput type
   const [analysisResult, setAnalysisResult] = useState<AnalyzeCvOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -39,8 +39,9 @@ export default function Home() {
     setCoverLetterError(null);
   };
 
+  // Accepts the full AnalyzeCvOutput object
   const handleAnalysisComplete = (result: AnalyzeCvOutput | null, err: string | null) => {
-    setAnalysisResult(result);
+    setAnalysisResult(result); // Store the full result including breakdown
     setAnalysisError(err);
     setIsAnalyzing(false);
   };
@@ -102,7 +103,7 @@ export default function Home() {
           <CardContent>
             <CvOptimizerForm
               onAnalysisStart={handleAnalysisStart}
-              onAnalysisComplete={handleAnalysisComplete}
+              onAnalysisComplete={handleAnalysisComplete} // Passes the full result
               onCreationStart={handleCreationStart}
               onCreationComplete={handleCreationComplete}
               onCoverLetterStart={handleCoverLetterStart} // Pass cover letter handlers
@@ -117,10 +118,10 @@ export default function Home() {
         {/* Conditionally render result sections */}
         {shouldShowAnyResult && (
           <div className="space-y-6">
-            {/* Analysis Results Section */}
+            {/* Analysis Results Section - Receives the full analysisResult object */}
             {(analysisResult || isAnalyzing || analysisError) && (
               <CvAnalysisResults
-                result={analysisResult}
+                result={analysisResult} // Pass the full result object
                 isLoading={isAnalyzing}
                 error={analysisError}
               />
