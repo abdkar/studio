@@ -89,7 +89,7 @@ export function CvOptimizerForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isParsingPdf, setIsParsingPdf] = useState(false);
 
-  const { formState: { isSubmitting: isFormSubmitting, errors }, trigger, getValues, setValue } = form;
+  const { formState: { isSubmitting: isFormSubmitting }, trigger, setValue } = form; // Removed unused variables
 
    // Sync form state with parent state when props change (e.g., from PDF parsing)
    React.useEffect(() => {
@@ -244,7 +244,7 @@ export function CvOptimizerForm({
       }
 
       // Use the prop names as destructured: cvText, jobDescText
-      const values = { cvText, jobDescriptionText: jobDescText };
+      const values = { cvText, jobDescriptionText: jobDescText }; // Ensure jobDescText is used
       onAnalysisStart();
       try {
           console.log('[CvOptimizerForm] Submitting for analysis...');
@@ -283,7 +283,7 @@ export function CvOptimizerForm({
      }
 
      // Use the prop names as destructured: cvText, jobDescText
-     const values = { cvText, jobDescriptionText: jobDescText };
+     const values = { cvText, jobDescriptionText: jobDescText }; // Ensure jobDescText is used
      onCreationStart();
      try {
          console.log('[CvOptimizerForm] Submitting for CV creation...');
@@ -322,13 +322,14 @@ export function CvOptimizerForm({
     }
 
     // Use the prop names as destructured: cvText, jobDescText
-    const values = { cvText, jobDescriptionText: jobDescText };
+    const values = { cvText, jobDescriptionText: jobDescText }; // Ensure jobDescText is used
     onCoverLetterStart(); // Signal start of the process (generation + evaluation)
     try {
         console.log('[CvOptimizerForm] Submitting for Cover Letter creation...');
+        // Conditionally include analysisResults only if it exists (is not null/undefined)
         const coverLetterInput: CreateCoverLetterInput = {
             ...values,
-            analysisResults: analysisResult // Pass the analysis result stored in parent state
+            ...(analysisResult && { analysisResults: analysisResult }) // Only add if analysisResult is truthy
         };
         const result: CreateCoverLetterOutput = await createCoverLetter(coverLetterInput);
         console.log('[CvOptimizerForm] Cover Letter creation result received.');
