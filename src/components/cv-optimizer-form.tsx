@@ -127,7 +127,7 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
         {/* CV File Upload */}
          <FormItem>
            <FormLabel htmlFor="cvFile" className="text-md font-semibold flex items-center gap-2 cursor-pointer hover:text-primary">
-             <Upload className="h-5 w-5" /> Upload CV from .txt file
+             <Upload className="h-5 w-5 text-green-600" /> {/* Changed icon color to green */} Upload CV from .txt file
            </FormLabel>
            <FormControl>
              <Input
