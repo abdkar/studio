@@ -30,6 +30,16 @@ const formSchema = z.object({
   }),
 });
 
+// Allowed MIME types and extensions
+const ACCEPTED_FILE_TYPES = [
+  'text/plain', // .txt
+  'application/pdf', // .pdf
+  'application/msword', // .doc
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+];
+const ACCEPTED_EXTENSIONS_STRING = '.txt, .pdf, .doc, .docx';
+
+
 type CvOptimizerFormProps = {
   onAnalysisStart: () => void;
   onAnalysisComplete: (result: AnalyzeCvOutput | null, error: string | null) => void;
@@ -50,35 +60,51 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    // Reset file input value immediately to allow re-uploading the same file
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+
     if (file) {
-      if (file.type === 'text/plain') {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const text = e.target?.result as string;
-          form.setValue('cvText', text, { shouldValidate: true });
-          toast({
-            title: "File Loaded",
-            description: "CV content loaded from the .txt file.",
-          });
-        };
-        reader.onerror = () => {
-           toast({
-            variant: "destructive",
-            title: "File Read Error",
-            description: "Could not read the selected file.",
-          });
+      if (ACCEPTED_FILE_TYPES.includes(file.type)) {
+        if (file.type === 'text/plain') {
+            // Handle .txt file
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const text = e.target?.result as string;
+              form.setValue('cvText', text, { shouldValidate: true });
+              toast({
+                title: "TXT File Loaded",
+                description: "CV content loaded successfully from the .txt file.",
+              });
+            };
+            reader.onerror = () => {
+               toast({
+                variant: "destructive",
+                title: "File Read Error",
+                description: "Could not read the selected .txt file.",
+              });
+            }
+            reader.readAsText(file);
+        } else {
+            // Handle PDF, DOC, DOCX - inform user about manual copy-paste
+            toast({
+                variant: "default", // Use default variant, maybe change to warning if available/desired
+                title: "File Uploaded",
+                description: `Uploaded ${file.name}. Please copy the text from your ${file.type.split('/')[1].toUpperCase()} file and paste it into the CV text area above for analysis.`,
+                duration: 9000, // Keep message longer
+            });
+            // Clear the CV text field if a non-txt file is uploaded, prompting manual paste
+            form.setValue('cvText', '', { shouldValidate: false });
         }
-        reader.readAsText(file);
+
       } else {
+        // Handle invalid file type
         toast({
           variant: "destructive",
           title: "Invalid File Type",
-          description: "Please upload a .txt file.",
+          description: `Please upload a supported file type: ${ACCEPTED_EXTENSIONS_STRING}.`,
         });
-         // Reset file input if type is invalid
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
       }
     }
   };
@@ -90,6 +116,10 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
       const result = await analyzeCv(values);
       console.log('Analysis result:', result);
       onAnalysisComplete(result, null);
+       toast({ // Add toast notification for success
+        title: "Analysis Complete",
+        description: "Your CV has been analyzed successfully.",
+      });
     } catch (error) {
       console.error('Error analyzing CV:', error);
        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during analysis.';
@@ -114,7 +144,7 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
               <FormLabel className="text-lg font-semibold">CV Text</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Paste the full text of your CV here, or upload a .txt file below..."
+                  placeholder="Paste the full text of your CV here, or upload a file below..."
                   className="min-h-[200px] resize-y bg-white" // Use white for contrast on light gray bg
                   {...field}
                 />
@@ -127,20 +157,20 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
         {/* CV File Upload */}
          <FormItem>
            <FormLabel htmlFor="cvFile" className="text-md font-semibold flex items-center gap-2 cursor-pointer hover:text-primary">
-             <Upload className="h-5 w-5 text-green-600" /> {/* Changed icon color to green */} Upload CV from .txt file
+             <Upload className="h-5 w-5 text-green-600" /> {/* Changed icon color to green */} Upload CV File ({ACCEPTED_EXTENSIONS_STRING})
            </FormLabel>
            <FormControl>
              <Input
                id="cvFile"
                type="file"
-               accept=".txt"
+               accept={ACCEPTED_FILE_TYPES.join(',')} // Update accept attribute
                onChange={handleFileChange}
                className="hidden" // Hide default input, label acts as trigger
                ref={fileInputRef}
              />
            </FormControl>
             <FormDescription>
-                Alternatively, upload your CV as a plain text (.txt) file. The content will populate the text area above.
+                You can upload your CV as a TXT, PDF, DOC, or DOCX file. For PDF/DOC/DOCX, please copy and paste the text into the field above after uploading.
             </FormDescription>
            <FormMessage /> {/* Add FormMessage for potential file-related errors if needed */}
          </FormItem>
