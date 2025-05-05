@@ -122,5 +122,3 @@ const createCvFlow = ai.defineFlow<
 
   return output; // Output now contains generatedCvMarkdown
 });
-
-```
