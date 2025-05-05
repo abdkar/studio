@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -15,11 +15,12 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input'; // Import Input component
+import { Input } from '@/components/ui/input';
 import { analyzeCv } from '@/ai/flows/cv-analyzer';
-import type { AnalyzeCvOutput } from '@/ai/flows/cv-analyzer'; // Import the type
+import { parsePdfAction } from '@/actions/parse-pdf'; // Import the server action
+import type { AnalyzeCvOutput } from '@/ai/flows/cv-analyzer';
 import { Loader2, Upload } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast"; // Import useToast
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   cvText: z.string().min(50, {
@@ -53,70 +54,104 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
       jobDescriptionText: '',
     },
   });
-  const { toast } = useToast(); // Initialize useToast
-  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for file input
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isParsingPdf, setIsParsingPdf] = useState(false); // State for PDF parsing loading
 
   const { isSubmitting } = form.formState;
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    // Reset file input value immediately to allow re-uploading the same file
     if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = ''; // Reset file input
     }
 
-    if (file) {
-      if (ACCEPTED_FILE_TYPES.includes(file.type)) {
-        if (file.type === 'text/plain') {
-            // Handle .txt file
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const text = e.target?.result as string;
-              form.setValue('cvText', text, { shouldValidate: true });
-              toast({
-                title: "TXT File Loaded",
-                description: "CV content loaded successfully from the .txt file.",
-              });
-            };
-            reader.onerror = () => {
-               toast({
-                variant: "destructive",
-                title: "File Read Error",
-                description: "Could not read the selected .txt file.",
-              });
-            }
-            reader.readAsText(file);
-        } else {
-            // Handle PDF, DOC, DOCX - inform user about manual copy-paste
-            toast({
-                variant: "default", // Use default variant, maybe change to warning if available/desired
-                title: "File Uploaded",
-                description: `Uploaded ${file.name}. Please copy the text from your ${file.type.split('/')[1].toUpperCase()} file and paste it into the CV text area above for analysis.`,
-                duration: 9000, // Keep message longer
-            });
-            // Clear the CV text field if a non-txt file is uploaded, prompting manual paste
-            form.setValue('cvText', '', { shouldValidate: false });
-        }
+    if (!file) return;
 
-      } else {
-        // Handle invalid file type
+    if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid File Type",
+        description: `Please upload a supported file type: ${ACCEPTED_EXTENSIONS_STRING}.`,
+      });
+      return;
+    }
+
+    // Handle TXT file
+    if (file.type === 'text/plain') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        form.setValue('cvText', text, { shouldValidate: true });
         toast({
+          title: "TXT File Loaded",
+          description: "CV content loaded successfully from the .txt file.",
+        });
+      };
+      reader.onerror = () => {
+         toast({
           variant: "destructive",
-          title: "Invalid File Type",
-          description: `Please upload a supported file type: ${ACCEPTED_EXTENSIONS_STRING}.`,
+          title: "File Read Error",
+          description: "Could not read the selected .txt file.",
         });
       }
+      reader.readAsText(file);
+    }
+    // Handle PDF file
+    else if (file.type === 'application/pdf') {
+      setIsParsingPdf(true);
+      form.setValue('cvText', '', { shouldValidate: false }); // Clear existing text
+      const formData = new FormData();
+      formData.append('pdfFile', file);
+
+      try {
+        const result = await parsePdfAction(formData);
+        if (result.success && result.text) {
+          form.setValue('cvText', result.text, { shouldValidate: true });
+          toast({
+            title: "PDF Parsed Successfully",
+            description: "CV content extracted from the PDF file.",
+          });
+        } else {
+           toast({
+             variant: "destructive",
+             title: "PDF Parsing Failed",
+             description: result.error || "Could not extract text from PDF. Please paste it manually.",
+           });
+           // Optionally clear the field again or leave it empty
+           form.setValue('cvText', '', { shouldValidate: true });
+        }
+      } catch (error) {
+        console.error('Error calling parsePdfAction:', error);
+        toast({
+          variant: "destructive",
+          title: "PDF Parsing Error",
+          description: "An unexpected error occurred while parsing the PDF. Please paste the text manually.",
+        });
+         form.setValue('cvText', '', { shouldValidate: true });
+      } finally {
+        setIsParsingPdf(false);
+      }
+    }
+    // Handle DOC/DOCX file (manual copy-paste)
+    else if (file.type === 'application/msword' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+       toast({
+         variant: "default",
+         title: "File Uploaded",
+         description: `Uploaded ${file.name}. Please copy the text from your Word document and paste it into the CV text area above. Automatic extraction is not supported for DOC/DOCX files.`,
+         duration: 9000,
+       });
+       // Clear the CV text field to prompt manual paste
+       form.setValue('cvText', '', { shouldValidate: false });
     }
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     onAnalysisStart();
     try {
-      console.log('Submitting form with values:', values);
       const result = await analyzeCv(values);
-      console.log('Analysis result:', result);
       onAnalysisComplete(result, null);
-       toast({ // Add toast notification for success
+       toast({
         title: "Analysis Complete",
         description: "Your CV has been analyzed successfully.",
       });
@@ -124,13 +159,15 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
       console.error('Error analyzing CV:', error);
        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during analysis.';
       onAnalysisComplete(null, `Analysis failed: ${errorMessage}. Please check the input and try again.`);
-      toast({ // Add toast notification for submission error
+      toast({
         variant: "destructive",
         title: "Analysis Error",
         description: `An error occurred: ${errorMessage}. Please try again.`,
       });
     }
   }
+
+  const isProcessing = isSubmitting || isParsingPdf; // Combined loading state
 
   return (
     <Form {...form}>
@@ -144,11 +181,18 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
               <FormLabel className="text-lg font-semibold">CV Text</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Paste the full text of your CV here, or upload a file below..."
-                  className="min-h-[200px] resize-y bg-white" // Use white for contrast on light gray bg
+                  placeholder="Paste the full text of your CV here, or upload a TXT/PDF file below. PDF text will be extracted automatically."
+                  className="min-h-[200px] resize-y bg-white"
                   {...field}
+                  disabled={isParsingPdf} // Disable textarea during PDF parsing
                 />
               </FormControl>
+               {isParsingPdf && ( // Show parsing indicator
+                  <div className="flex items-center text-sm text-muted-foreground mt-1">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Parsing PDF, please wait...
+                  </div>
+                )}
               <FormMessage />
             </FormItem>
           )}
@@ -156,23 +200,25 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
 
         {/* CV File Upload */}
          <FormItem>
-           <FormLabel htmlFor="cvFile" className="text-md font-semibold flex items-center gap-2 cursor-pointer hover:text-primary">
-             <Upload className="h-5 w-5 text-green-600" /> {/* Changed icon color to green */} Upload CV File ({ACCEPTED_EXTENSIONS_STRING})
+           <FormLabel htmlFor="cvFile" className={`text-md font-semibold flex items-center gap-2 ${isProcessing ? 'cursor-not-allowed text-muted-foreground' : 'cursor-pointer hover:text-primary'}`}>
+             <Upload className={`h-5 w-5 ${isProcessing ? 'text-muted-foreground' : 'text-green-600'}`} />
+             Upload CV File ({ACCEPTED_EXTENSIONS_STRING})
            </FormLabel>
            <FormControl>
              <Input
                id="cvFile"
                type="file"
-               accept={ACCEPTED_FILE_TYPES.join(',')} // Update accept attribute
+               accept={ACCEPTED_FILE_TYPES.join(',')}
                onChange={handleFileChange}
-               className="hidden" // Hide default input, label acts as trigger
+               className="hidden"
                ref={fileInputRef}
+               disabled={isProcessing} // Disable file input during processing
              />
            </FormControl>
             <FormDescription>
-                You can upload your CV as a TXT, PDF, DOC, or DOCX file. For PDF/DOC/DOCX, please copy and paste the text into the field above after uploading.
+                Upload TXT or PDF for automatic text extraction. For DOC/DOCX, please upload and then manually copy/paste the text into the field above.
             </FormDescription>
-           <FormMessage /> {/* Add FormMessage for potential file-related errors if needed */}
+           <FormMessage />
          </FormItem>
 
 
@@ -186,8 +232,9 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
               <FormControl>
                 <Textarea
                   placeholder="Paste the full text of the job description here..."
-                  className="min-h-[200px] resize-y bg-white" // Use white for contrast
+                  className="min-h-[200px] resize-y bg-white"
                   {...field}
+                  disabled={isParsingPdf} // Also disable JD if parsing CV
                 />
               </FormControl>
               <FormMessage />
@@ -196,11 +243,16 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
         />
 
         {/* Submit Button */}
-        <Button type="submit" disabled={isSubmitting} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+        <Button type="submit" disabled={isProcessing} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Analyzing...
+            </>
+          ) : isParsingPdf ? (
+             <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Parsing PDF...
             </>
           ) : (
             'Optimize CV'
