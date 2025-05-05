@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -5,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Copy, Download, FileText, FileType, Loader2, Mail } from 'lucide-react'; // Added FileType, Loader2
+import { AlertCircle, Copy, Download, FileText, FileType, Loader2, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'; // Import Font
+import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
 
 type GeneratedCoverLetterDisplayProps = {
   coverLetterText: string | null;
@@ -17,71 +18,51 @@ type GeneratedCoverLetterDisplayProps = {
 
 
 // --- PDF Styling ---
-// Register standard fonts (optional but recommended for consistency)
-// Note: @react-pdf/renderer uses fontkit. Ensure fonts are accessible.
 // Using standard PDF fonts like Times-Roman is safer if embedding isn't set up.
-// Font.register({
-//   family: 'Times-Roman',
-//   src: 'path/to/times.ttf', // You'd need to host font files or use system fonts if allowed
-// });
-// Font.register({
-//   family: 'Times-Bold',
-//    src: 'path/to/timesbd.ttf',
-// });
-
+// Font registration can be complex and environment-dependent.
 const pdfStyles = StyleSheet.create({
   page: {
-    fontFamily: 'Times-Roman', // Standard PDF font
+    fontFamily: 'Times-Roman', // Standard, widely supported PDF font
     fontSize: 11,
-    paddingTop: 40, // Increased padding
-    paddingLeft: 60, // Increased padding
-    paddingRight: 60, // Increased padding
-    paddingBottom: 40, // Increased padding
+    paddingTop: 60, // Standard margins
+    paddingLeft: 72,
+    paddingRight: 72,
+    paddingBottom: 60,
     lineHeight: 1.5,
-    color: '#333333', // Default text color
-  },
-  section: {
-    marginBottom: 10,
-  },
-  addressBlock: {
-    textAlign: 'left',
-    marginBottom: 20,
-  },
-  body: {
-    textAlign: 'justify', // Justify body text
+    color: '#333333',
   },
   paragraph: {
-    marginBottom: 12, // Slightly increased paragraph spacing
-  },
-  closing: {
-    marginTop: 20,
-  },
-  signature: {
-    marginTop: 4, // Reduced space before typed name
-  },
-  bold: {
-    fontFamily: 'Times-Bold', // Use Times-Bold variant
+    marginBottom: 10, // Space between paragraphs
+    textAlign: 'justify', // Justify text for a formal look
   },
   placeholder: {
-     color: '#888888', // Lighter color for placeholders
+     color: '#888888',
      fontStyle: 'italic',
+     textAlign: 'center',
+     marginTop: 20,
    },
 });
 
-// --- PDF Document Component (Simplified for Debugging) ---
+// --- PDF Document Component ---
 const CoverLetterPdfDocument = ({ text }: { text: string | null }) => {
+  // Ensure text is a string before splitting, default to empty array if null/undefined
+  const lines = typeof text === 'string' ? text.split('\n') : [];
+
   return (
     <Document title="Cover Letter">
       <Page size="A4" style={pdfStyles.page}>
-        <View style={pdfStyles.body}>
-          {text ? (
-            // Simple rendering of text split by newlines
-            text.split('\n').map((line, index) => (
-              <Text key={`line-${index}`} style={pdfStyles.paragraph}>{line || ' '}</Text> // Render blank lines too
+        <View>
+          {lines.length > 0 ? (
+            lines.map((line, index) => (
+              // Render each line as a Text component. Add explicit non-breaking space for empty lines
+              // to ensure they take up space, otherwise they might collapse.
+              <Text key={`line-${index}`} style={pdfStyles.paragraph}>
+                {line.trim() === '' ? '\u00A0' : line}
+              </Text>
             ))
           ) : (
-            // Explicit placeholder if text is null
-            <Text style={pdfStyles.placeholder}>No cover letter content available to generate PDF.</Text>
+            // Display placeholder if no text is provided
+            <Text style={pdfStyles.placeholder}>Cover letter content is empty or unavailable.</Text>
           )}
         </View>
       </Page>
@@ -95,7 +76,7 @@ export function GeneratedCoverLetterDisplay({ coverLetterText, isLoading, error 
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
 
-  // Ensure PDFDownloadLink only renders on the client
+  // Ensure PDFDownloadLink only renders on the client-side after hydration
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -132,18 +113,13 @@ export function GeneratedCoverLetterDisplay({ coverLetterText, isLoading, error 
     }
   };
 
-   // Handle Word and LaTeX (Placeholders - require server-side conversion or complex libraries)
+   // Handle Word and LaTeX (Placeholders)
   const handleDownloadDocx = () => {
     toast({ variant: "default", title: "Feature Not Implemented", description: "Word (.docx) download requires server-side processing and is not yet available." });
-     // Placeholder: Future implementation would involve sending `coverLetterText`
-     // to a backend endpoint that uses a library like mammoth.js or pandoc
-     // to convert text/Markdown to DOCX.
   };
 
   const handleDownloadTex = () => {
      toast({ variant: "default", title: "Feature Not Implemented", description: "LaTeX (.tex) download requires server-side processing or complex formatting and is not yet available." });
-     // Placeholder: Future implementation might involve sending text to a backend
-     // or using a sophisticated JS library to generate basic LaTeX structure.
   };
 
   if (isLoading) {
@@ -177,8 +153,8 @@ export function GeneratedCoverLetterDisplay({ coverLetterText, isLoading, error 
     );
   }
 
-  // Do not render card if there's no cover letter text AND it's not loading AND there's no error
-  if (!coverLetterText && !isLoading && !error) {
+  // Do not render the card if there's no result to display
+  if (!coverLetterText) {
     return null;
   }
 
@@ -190,65 +166,59 @@ export function GeneratedCoverLetterDisplay({ coverLetterText, isLoading, error 
            <Mail className="h-6 w-6 text-primary" /> Generated Cover Letter
         </CardTitle>
         <CardDescription>
-          Review the generated cover letter text below. You can copy or download it in various formats.
+          Review the generated cover letter text below. You can copy or download it in various formats. PDF generation might take a moment.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
          <div className="flex justify-end flex-wrap gap-2">
             {/* --- Action Buttons --- */}
-             {/* Buttons are only enabled if coverLetterText is not null */}
             <Button variant="outline" size="sm" onClick={handleCopy} disabled={!coverLetterText}>
                 <Copy className="mr-2 h-4 w-4" /> Copy Text
             </Button>
             <Button variant="outline" size="sm" onClick={handleDownloadTxt} disabled={!coverLetterText}>
                 <FileText className="mr-2 h-4 w-4" /> Download (.txt)
             </Button>
-            {/* PDF Download Button */}
+
+            {/* PDF Download Button - Conditional Rendering */}
             {isClient ? (
-                 // Render the link only if coverLetterText exists
+                 // Only render PDF link if text exists and we are on the client
                  coverLetterText ? (
                      <PDFDownloadLink
                          document={<CoverLetterPdfDocument text={coverLetterText} />}
                          fileName="cover_letter.pdf"
+                         // Add basic styling to the link itself to look like a button
+                         className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
                      >
-                         {({ loading }) => (
-                             <Button
-                                 variant="outline"
-                                 size="sm"
-                                 disabled={loading}
-                                 aria-label="Download Cover Letter as PDF"
-                              >
-                                 {loading ? (
-                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                 ) : (
-                                     <Download className="mr-2 h-4 w-4" />
-                                 )}
-                                 Download (.pdf)
-                             </Button>
+                         {({ loading, error: pdfError }) => (
+                             <>
+                                {loading ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Download className="mr-2 h-4 w-4" />
+                                )}
+                                Download (.pdf)
+                                {pdfError && console.error("PDF Generation Error (reported by PDFDownloadLink):", pdfError)}
+                             </>
                          )}
                      </PDFDownloadLink>
                  ) : (
-                     // Render disabled button if no text
-                     <Button
-                         variant="outline"
-                         size="sm"
-                         disabled
-                         aria-label="PDF download disabled, no content"
-                     >
-                        <Download className="mr-2 h-4 w-4" />
-                        Download (.pdf)
+                     // Disabled button state if no text
+                     <Button variant="outline" size="sm" disabled aria-label="PDF download disabled, no content">
+                        <Download className="mr-2 h-4 w-4" /> Download (.pdf)
                      </Button>
                  )
              ) : (
-                  // Placeholder button while waiting for client-side render
+                 // Placeholder button during server render / hydration
                  <Button variant="outline" size="sm" disabled>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading PDF...
                  </Button>
              )}
-             <Button variant="outline" size="sm" onClick={handleDownloadDocx} disabled> {/* Disabled for now */}
+
+             {/* Placeholder Buttons for DOCX/TEX */}
+             <Button variant="outline" size="sm" onClick={handleDownloadDocx} disabled>
                 <FileType className="mr-2 h-4 w-4" /> Download (.docx)
              </Button>
-              <Button variant="outline" size="sm" onClick={handleDownloadTex} disabled> {/* Disabled for now */}
+             <Button variant="outline" size="sm" onClick={handleDownloadTex} disabled>
                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-filetype-tex mr-2" viewBox="0 0 16 16"><path fillRule="evenodd" d="M14 4.5V14a2 2 0 0 1-2 2h-1v-1h1a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v9H2V2a2 2 0 0 1 2-2h5.5zM1.6 11.85H0v.9h1.6v1.48h.87v-1.48h1.6v-.9h-1.6V10.3h-.87zM5.56 11.8h-.85v2.14h.85zM7.91 14h.87v-1.48h1.6v-.9h-1.6v-.68h.85v-.9H7.91zm4.08 0h.87v-1.48h1.6v-.9h-1.6v-.68h.85v-.9h-2.47v3.96z"/></svg>
                  Download (.tex)
              </Button>
@@ -257,13 +227,15 @@ export function GeneratedCoverLetterDisplay({ coverLetterText, isLoading, error 
 
         {/* Display the cover letter text in a styled preview area */}
         <div
-          className="min-h-[400px] resize-y overflow-auto border rounded-md p-4 bg-white text-foreground font-serif text-sm leading-relaxed shadow-inner whitespace-pre-wrap" // Use serif font and preserve whitespace/newlines
+          className="min-h-[400px] resize-y overflow-auto border rounded-md p-4 bg-white text-foreground font-serif text-sm leading-relaxed shadow-inner whitespace-pre-wrap"
           aria-label="Generated Cover Letter Preview"
         >
-           {/* Render text directly or a placeholder */}
-            {coverLetterText || <p className="text-muted-foreground italic">No cover letter generated yet.</p>}
+           {/* Render text directly */}
+           {coverLetterText}
         </div>
       </CardContent>
     </Card>
   );
 }
+
+    
