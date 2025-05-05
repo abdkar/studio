@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, Copy, Download, FileText, FileType, Loader2, Mail } from 'lucide-react'; // Added FileType, Loader2
 import { useToast } from '@/hooks/use-toast';
-import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'; // Import Font
 
 type GeneratedCoverLetterDisplayProps = {
   coverLetterText: string | null;
@@ -15,55 +15,81 @@ type GeneratedCoverLetterDisplayProps = {
   error: string | null;
 };
 
+
 // --- PDF Styling ---
+// Register standard fonts (optional but recommended for consistency)
+// Note: @react-pdf/renderer uses fontkit. Ensure fonts are accessible.
+// Using standard PDF fonts like Times-Roman is safer if embedding isn't set up.
+// Font.register({
+//   family: 'Times-Roman',
+//   src: 'path/to/times.ttf', // You'd need to host font files or use system fonts if allowed
+// });
+// Font.register({
+//   family: 'Times-Bold',
+//    src: 'path/to/timesbd.ttf',
+// });
+
 const pdfStyles = StyleSheet.create({
   page: {
-    fontFamily: 'Times-Roman', // Standard font
+    fontFamily: 'Times-Roman', // Standard PDF font
     fontSize: 11,
-    paddingTop: 30,
-    paddingLeft: 50,
-    paddingRight: 50,
-    paddingBottom: 30,
+    paddingTop: 40, // Increased padding
+    paddingLeft: 60, // Increased padding
+    paddingRight: 60, // Increased padding
+    paddingBottom: 40, // Increased padding
     lineHeight: 1.5,
+    color: '#333333', // Default text color
   },
   section: {
     marginBottom: 10,
-  },
-  header: {
-    textAlign: 'right',
-    marginBottom: 20,
   },
   addressBlock: {
     textAlign: 'left',
     marginBottom: 20,
   },
   body: {
-    textAlign: 'justify',
+    textAlign: 'justify', // Justify body text
   },
   paragraph: {
-    marginBottom: 10,
+    marginBottom: 12, // Slightly increased paragraph spacing
   },
   closing: {
     marginTop: 20,
   },
   signature: {
-    marginTop: 10,
+    marginTop: 4, // Reduced space before typed name
   },
   bold: {
-    fontFamily: 'Times-Bold',
-  }
+    fontFamily: 'Times-Bold', // Use Times-Bold variant
+  },
+  placeholder: {
+     color: '#888888', // Lighter color for placeholders
+     fontStyle: 'italic',
+   },
 });
 
 // --- PDF Document Component ---
-const CoverLetterPdfDocument = ({ text }: { text: string }) => {
-    // Basic parsing attempt - This is very fragile and depends heavily on the LLM output format.
-    // A more robust solution would involve a more structured output from the LLM.
-    const lines = text.split('\n');
-    const dateRegex = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}$/;
-    const salutationRegex = /^Dear\s+(.*?),?$/;
-    const closingRegex = /^(Sincerely|Regards|Yours faithfully|Yours truly),?$/;
+const CoverLetterPdfDocument = ({ text }: { text: string | null }) => {
 
-    let contactInfo: string[] = [];
+    // Handle null text gracefully
+    if (!text) {
+        return (
+            <Document title="Cover Letter">
+                <Page size="A4" style={pdfStyles.page}>
+                    <View style={pdfStyles.body}>
+                        <Text style={pdfStyles.placeholder}>Error: No cover letter content available.</Text>
+                    </View>
+                </Page>
+            </Document>
+        );
+    }
+
+    // Basic parsing attempt - This is very fragile and depends heavily on the LLM output format.
+    const lines = text.split('\n');
+    const dateRegex = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}$/i; // Case-insensitive
+    const salutationRegex = /^Dear\s+(.*?),?$/i; // Case-insensitive
+    const closingRegex = /^(Sincerely|Regards|Yours faithfully|Yours truly),?$/i; // Case-insensitive
+
     let recipientInfo: string[] = [];
     let dateLine: string | null = null;
     let salutationLine: string | null = null;
@@ -71,125 +97,167 @@ const CoverLetterPdfDocument = ({ text }: { text: string }) => {
     let closingLine: string | null = null;
     let signatureLine: string | null = null;
 
-    let currentState: 'start' | 'contact' | 'recipient' | 'date' | 'salutation' | 'body' | 'closing' | 'signature' = 'start';
+    let currentState: 'start' | 'recipientOrDate' | 'salutation' | 'body' | 'closing' | 'signature' = 'start';
     let currentParagraph = '';
 
-    // Simple state machine to parse structure (highly simplified)
+    // Slightly improved state machine for parsing
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
 
+        // Handle blank lines - they usually separate paragraphs or sections
         if (!line) {
-            if (currentParagraph) {
+            if (currentParagraph && currentState === 'body') {
                 bodyParagraphs.push(currentParagraph);
                 currentParagraph = '';
             }
-            if (currentState === 'body') currentState = 'body'; // Stay in body if blank line within
-            continue; // Skip blank lines
-        }
-
-        if (currentState === 'start' && !dateRegex.test(line) && !salutationRegex.test(line) && line.length > 5) { // Assume first few non-empty lines are contact/recipient
-           if (i < 5) recipientInfo.push(line); // Guessing first few lines are recipient
-           else currentState = 'date'; // Move on if too many lines
-           continue;
-        }
-
-        if (dateRegex.test(line)) {
-            dateLine = line;
-            currentState = 'salutation';
+            // Don't change state on blank lines necessarily, just use them as separators
             continue;
         }
 
-         if (salutationRegex.test(line)) {
-            salutationLine = line;
-            currentState = 'body';
-            continue;
-        }
+        switch (currentState) {
+            case 'start':
+                // First non-blank lines could be recipient info or date
+                 if (dateRegex.test(line)) {
+                     dateLine = line;
+                     currentState = 'salutation'; // Expect salutation after date
+                 } else if (salutationRegex.test(line)) {
+                    // Allow skipping recipient/date if salutation comes first
+                    salutationLine = line;
+                    currentState = 'body';
+                 } else if (i < 5) { // Assume first few lines might be recipient
+                    recipientInfo.push(line);
+                    // Stay in 'recipientOrDate' state implicitly by not changing
+                 } else {
+                     // If we have many lines and haven't found date/salutation, assume body starts
+                     currentState = 'body';
+                     currentParagraph += (currentParagraph ? '\n' : '') + line; // Start body
+                 }
+                break;
 
-        if (currentState === 'body' && closingRegex.test(line)) {
-             if (currentParagraph) bodyParagraphs.push(currentParagraph);
-             currentParagraph = '';
-             closingLine = line;
-             currentState = 'signature';
-             continue;
-        }
+            case 'recipientOrDate': // Implicitly handled by continuing 'start' logic or moving to 'salutation'/'body'
+                 if (dateRegex.test(line)) {
+                     dateLine = line;
+                     currentState = 'salutation';
+                 } else if (salutationRegex.test(line)) {
+                    salutationLine = line;
+                    currentState = 'body';
+                 } else if (i < 5) { // Continue adding recipient info
+                     recipientInfo.push(line);
+                 } else {
+                    currentState = 'body';
+                    currentParagraph += (currentParagraph ? '\n' : '') + line;
+                 }
+                break;
 
-        if (currentState === 'body') {
-           currentParagraph += (currentParagraph ? ' ' : '') + line;
-           // Add paragraph break heuristics if needed, e.g., based on indentation or sentence end.
-           // For now, just concatenate lines until a blank line or closing.
-           continue;
-        }
 
-        if (currentState === 'signature') {
-            signatureLine = line; // Assume the line after closing is the signature name
-            break; // Stop parsing after signature
+            case 'salutation':
+                if (salutationRegex.test(line)) {
+                    salutationLine = line;
+                    currentState = 'body';
+                } else {
+                    // If salutation wasn't found immediately after date, assume body starts
+                    currentState = 'body';
+                    currentParagraph += (currentParagraph ? '\n' : '') + line;
+                }
+                break;
+
+            case 'body':
+                if (closingRegex.test(line)) {
+                    if (currentParagraph) bodyParagraphs.push(currentParagraph);
+                    currentParagraph = '';
+                    closingLine = line;
+                    currentState = 'signature';
+                } else {
+                    // Append line to current paragraph, handle paragraph breaks via blank lines (handled above)
+                     currentParagraph += (currentParagraph ? ' ' : '') + line;
+                }
+                break;
+
+            case 'closing': // Transition happens within 'body' state check
+                break;
+
+            case 'signature':
+                if (!signatureLine) { // Capture the first line after the closing as the signature
+                    signatureLine = line;
+                }
+                // Allow multiple lines in signature block? For now, just capture the first.
+                // Stop parsing after the first signature line is found? Or let it continue? Stop for now.
+                 // break; // Uncomment to stop reading after signature line
+                break;
         }
     }
-     // Add any remaining paragraph
+     // Add any remaining paragraph content if the loop finished while in the body state
      if (currentParagraph && currentState === 'body') {
         bodyParagraphs.push(currentParagraph);
     }
-     // If parsing failed, fall back to rendering the whole text as body
-     if (bodyParagraphs.length === 0 && !closingLine) {
-        bodyParagraphs = lines.filter(l => l.trim().length > 0);
-     }
+
+    // --- Fallback Logic ---
+     // Check if parsing produced *any* structure. If not, render raw text.
+     const isParsingSuccessful = recipientInfo.length > 0 || dateLine || salutationLine || bodyParagraphs.length > 0 || closingLine || signatureLine;
+     const fallbackText = !isParsingSuccessful ? text : null; // Use raw text only if NO structure was parsed
 
 
   return (
     <Document title="Cover Letter">
       <Page size="A4" style={pdfStyles.page}>
-        {/* Simple placeholder for contact info - Improve if LLM provides it structured */}
-        {/* <View style={pdfStyles.header}>
-            <Text style={pdfStyles.bold}>[Your Name]</Text>
-            <Text>[Your Address]</Text>
-            <Text>[Your Phone]</Text>
-            <Text>[Your Email]</Text>
-        </View> */}
-
-        {recipientInfo.length > 0 && (
-             <View style={pdfStyles.addressBlock}>
-                {recipientInfo.map((line, index) => <Text key={`recipient-${index}`}>{line}</Text>)}
+        {fallbackText ? (
+           // --- Render Raw Text Fallback ---
+            <View style={pdfStyles.body}>
+                {fallbackText.split('\n').map((line, index) => (
+                     <Text key={`fallback-${index}`} style={pdfStyles.paragraph}>{line || ' '}</Text> // Render blank lines too
+                ))}
             </View>
-        )}
+        ) : (
+           // --- Render Parsed Structure ---
+            <>
+                {recipientInfo.length > 0 && (
+                     <View style={pdfStyles.addressBlock}>
+                        {recipientInfo.map((line, index) => <Text key={`recipient-${index}`}>{line}</Text>)}
+                    </View>
+                )}
 
-        {dateLine && (
-            <View style={pdfStyles.addressBlock}>
-                <Text>{dateLine}</Text>
-            </View>
-        )}
+                {dateLine && (
+                    <View style={pdfStyles.addressBlock}>
+                        <Text>{dateLine}</Text>
+                    </View>
+                )}
 
-        {salutationLine && (
-             <View style={pdfStyles.section}>
-                 <Text>{salutationLine}</Text>
-            </View>
-        )}
+                 {/* Add space if recipient or date exists before salutation */}
+                 {(recipientInfo.length > 0 || dateLine) && salutationLine && <View style={{marginBottom: 10}} />}
+
+                {salutationLine && (
+                     <View style={pdfStyles.section}>
+                         <Text>{salutationLine}</Text>
+                    </View>
+                )}
 
 
-        <View style={pdfStyles.body}>
-          {bodyParagraphs.map((paragraph, index) => (
-            <Text key={`p-${index}`} style={pdfStyles.paragraph}>
-              {paragraph}
-            </Text>
-          ))}
-        </View>
+                <View style={pdfStyles.body}>
+                  {bodyParagraphs.map((paragraph, index) => (
+                    <Text key={`p-${index}`} style={pdfStyles.paragraph}>
+                      {paragraph}
+                    </Text>
+                  ))}
+                </View>
 
-         {closingLine && (
-            <View style={pdfStyles.closing}>
-                <Text>{closingLine}</Text>
-            </View>
+                 {closingLine && (
+                    <View style={pdfStyles.closing}>
+                        <Text>{closingLine}</Text>
+                    </View>
+                )}
+                {signatureLine && (
+                     <View style={pdfStyles.signature}>
+                         <Text>{signatureLine}</Text>
+                    </View>
+                )}
+                {/* Placeholder if signature not parsed but closing exists */}
+                {!signatureLine && closingLine && (
+                    <View style={pdfStyles.signature}>
+                         <Text style={pdfStyles.placeholder}>[Your Typed Name]</Text>
+                    </View>
+                )}
+            </>
         )}
-        {signatureLine && (
-             <View style={pdfStyles.signature}>
-                 <Text>{signatureLine}</Text>
-            </View>
-        )}
-        {/* Fallback if signature not parsed */}
-        {!signatureLine && closingLine && (
-            <View style={pdfStyles.signature}>
-                 <Text>[Your Typed Name]</Text>
-            </View>
-        )}
-
       </Page>
     </Document>
   );
@@ -277,9 +345,11 @@ export function GeneratedCoverLetterDisplay({ coverLetterText, isLoading, error 
     );
   }
 
-  if (!coverLetterText) {
+  // Do not render card if there's no cover letter text AND it's not loading AND there's no error
+  if (!coverLetterText && !isLoading && !error) {
     return null;
   }
+
 
   return (
     <Card className="shadow-md">
@@ -294,29 +364,37 @@ export function GeneratedCoverLetterDisplay({ coverLetterText, isLoading, error 
       <CardContent className="space-y-4">
          <div className="flex justify-end flex-wrap gap-2">
             {/* --- Action Buttons --- */}
-            <Button variant="outline" size="sm" onClick={handleCopy}>
+             {/* Buttons are only enabled if coverLetterText is not null */}
+            <Button variant="outline" size="sm" onClick={handleCopy} disabled={!coverLetterText}>
                 <Copy className="mr-2 h-4 w-4" /> Copy Text
             </Button>
-            <Button variant="outline" size="sm" onClick={handleDownloadTxt}>
+            <Button variant="outline" size="sm" onClick={handleDownloadTxt} disabled={!coverLetterText}>
                 <FileText className="mr-2 h-4 w-4" /> Download (.txt)
             </Button>
-            {/* PDF Download Button - Rendered only on client */}
+            {/* PDF Download Button - Rendered only on client, disabled if no text */}
             {isClient ? (
-                <PDFDownloadLink
-                    document={<CoverLetterPdfDocument text={coverLetterText} />}
-                    fileName="cover_letter.pdf"
-                >
-                    {({ loading }) => (
-                        <Button variant="outline" size="sm" disabled={loading}>
-                            {loading ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Download className="mr-2 h-4 w-4" />
-                            )}
-                            Download (.pdf)
-                        </Button>
-                    )}
-                </PDFDownloadLink>
+                 // Render the link only if coverLetterText exists
+                 coverLetterText ? (
+                     <PDFDownloadLink
+                         document={<CoverLetterPdfDocument text={coverLetterText} />}
+                         fileName="cover_letter.pdf"
+                     >
+                         {({ loading }) => (
+                             <Button variant="outline" size="sm" disabled={loading}>
+                                 {loading ? (
+                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                 ) : (
+                                     <Download className="mr-2 h-4 w-4" />
+                                 )}
+                                 Download (.pdf)
+                             </Button>
+                         )}
+                     </PDFDownloadLink>
+                 ) : (
+                      <Button variant="outline" size="sm" disabled>
+                          <Download className="mr-2 h-4 w-4" /> Download (.pdf)
+                      </Button>
+                 )
              ) : (
                  <Button variant="outline" size="sm" disabled>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading PDF...
@@ -337,13 +415,17 @@ export function GeneratedCoverLetterDisplay({ coverLetterText, isLoading, error 
           className="min-h-[400px] resize-y overflow-auto border rounded-md p-4 bg-white text-foreground font-serif text-sm leading-relaxed shadow-inner" // Using serif font for letter feel
           aria-label="Generated Cover Letter Preview"
         >
-           {/* Render text with preserved line breaks */}
-           {coverLetterText.split('\n').map((line, index) => (
-              <React.Fragment key={index}>
-                {line}
-                <br />
-              </React.Fragment>
-            ))}
+           {/* Render text with preserved line breaks or a placeholder */}
+            {coverLetterText ? (
+                coverLetterText.split('\n').map((line, index) => (
+                  <React.Fragment key={index}>
+                    {line}
+                    <br />
+                  </React.Fragment>
+                ))
+            ) : (
+                 <p className="text-muted-foreground italic">No cover letter generated yet.</p>
+            )}
         </div>
       </CardContent>
     </Card>
