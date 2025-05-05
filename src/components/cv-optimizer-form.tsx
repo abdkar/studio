@@ -18,9 +18,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { analyzeCv, type AnalyzeCvOutput } from '@/ai/flows/cv-analyzer';
 import { createCv, type CreateCvOutput } from '@/ai/flows/create-cv-flow';
-import { createCoverLetter, type CreateCoverLetterOutput } from '@/ai/flows/create-cover-letter-flow'; // Import create cover letter flow
+import { createCoverLetter, type CreateCoverLetterOutput, type CreateCoverLetterInput } from '@/ai/flows/create-cover-letter-flow'; // Import updated flow types
 import { parsePdfAction } from '@/actions/parse-pdf';
-import { Loader2, Upload, FileText, FileCheck2, Mail } from 'lucide-react'; // Added Mail icon
+import { Loader2, Upload, FileText, FileCheck2, Mail } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
@@ -46,11 +46,13 @@ type CvOptimizerFormProps = {
   onAnalysisComplete: (result: AnalyzeCvOutput | null, error: string | null) => void;
   onCreationStart: () => void;
   onCreationComplete: (result: string | null, error: string | null) => void;
-  onCoverLetterStart: () => void; // New prop for cover letter start
-  onCoverLetterComplete: (result: string | null, error: string | null) => void; // New prop for cover letter complete
+  onCoverLetterStart: () => void;
+  onCoverLetterComplete: (result: string | null, error: string | null) => void;
   isAnalyzing: boolean;
   isCreating: boolean;
-  isCreatingCoverLetter: boolean; // Pass loading state for cover letter
+  isCreatingCoverLetter: boolean;
+  // Add state to hold analysis results to potentially pass to cover letter generation
+  analysisResult: AnalyzeCvOutput | null;
 };
 
 export function CvOptimizerForm({
@@ -63,6 +65,7 @@ export function CvOptimizerForm({
   isAnalyzing,
   isCreating,
   isCreatingCoverLetter,
+  analysisResult, // Receive analysis result state
 }: CvOptimizerFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -212,7 +215,7 @@ export function CvOptimizerForm({
           console.log('[CvOptimizerForm] Submitting for analysis...');
           const result = await analyzeCv(values);
           console.log('[CvOptimizerForm] Analysis result received:', result);
-          onAnalysisComplete(result, null);
+          onAnalysisComplete(result, null); // Pass the result back up
           toast({
               title: "Analysis Complete",
               description: "Your CV has been analyzed successfully.",
@@ -220,7 +223,7 @@ export function CvOptimizerForm({
       } catch (error) {
           console.error('[CvOptimizerForm] Error analyzing CV:', error);
           const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during analysis.';
-          onAnalysisComplete(null, `Analysis failed: ${errorMessage}. Please check the input and try again.`);
+          onAnalysisComplete(null, `Analysis failed: ${errorMessage}. Please check the input and try again.`); // Pass null result back up
           toast({
               variant: "destructive",
               title: "Analysis Error",
@@ -284,7 +287,12 @@ export function CvOptimizerForm({
     onCoverLetterStart();
     try {
         console.log('[CvOptimizerForm] Submitting for Cover Letter creation...');
-        const result: CreateCoverLetterOutput = await createCoverLetter(values);
+        // Prepare input, including analysis results if available
+        const coverLetterInput: CreateCoverLetterInput = {
+            ...values,
+            analysisResults: analysisResult // Pass the analysis result stored in parent state
+        };
+        const result: CreateCoverLetterOutput = await createCoverLetter(coverLetterInput);
         console.log('[CvOptimizerForm] Cover Letter creation result received.');
         onCoverLetterComplete(result.generatedCoverLetterText, null);
         toast({

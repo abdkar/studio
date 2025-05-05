@@ -31,7 +31,7 @@ export default function Home() {
   const handleAnalysisStart = () => {
     setIsAnalyzing(true);
     setAnalysisError(null);
-    setAnalysisResult(null);
+    setAnalysisResult(null); // Clear analysis result on new start
     // Clear other results when starting analysis
     setGeneratedCvMarkdown(null);
     setCreationError(null);
@@ -51,7 +51,7 @@ export default function Home() {
     setCreationError(null);
     setGeneratedCvMarkdown(null);
     // Clear other results when starting CV creation
-    setAnalysisResult(null);
+    setAnalysisResult(null); // Clear analysis when creating CV
     setAnalysisError(null);
     setGeneratedCoverLetter(null);
     setCoverLetterError(null);
@@ -67,9 +67,10 @@ export default function Home() {
     setIsCreatingCoverLetter(true);
     setCoverLetterError(null);
     setGeneratedCoverLetter(null);
-    // Clear other results when starting cover letter creation
-    setAnalysisResult(null);
-    setAnalysisError(null);
+    // Don't clear analysis results when starting cover letter, as it might be used
+    // Clear other results though
+    // setAnalysisResult(null); // Keep analysisResult
+    // setAnalysisError(null);
     setGeneratedCvMarkdown(null);
     setCreationError(null);
   };
@@ -111,6 +112,7 @@ export default function Home() {
               isAnalyzing={isAnalyzing}
               isCreating={isCreatingCv}
               isCreatingCoverLetter={isCreatingCoverLetter} // Pass cover letter loading state
+              analysisResult={analysisResult} // Pass down the analysis result state
             />
           </CardContent>
         </Card>

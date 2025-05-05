@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/ai-instance';
 import {z} from 'genkit';
+import { AnalyzeCvOutputSchema } from './cv-analyzer-schema'; // Import schema from separate file
 
 const AnalyzeCvInputSchema = z.object({
   cvText: z.string().describe('The text content of the CV.'),
@@ -17,20 +18,7 @@ const AnalyzeCvInputSchema = z.object({
 });
 export type AnalyzeCvInput = z.infer<typeof AnalyzeCvInputSchema>;
 
-// Updated output schema with score breakdown
-const AnalyzeCvOutputSchema = z.object({
-  matchPercentage: z.number().min(0).max(100).describe('The overall percentage of how well the CV matches the job description.'),
-  scoreBreakdown: z.object({
-    experience: z.number().min(0).max(100).describe('Match percentage for Experience alignment (0-100).'),
-    education: z.number().min(0).max(100).describe('Match percentage for Education alignment (0-100).'),
-    skills: z.number().min(0).max(100).describe('Match percentage for Skills and Expertise alignment (0-100).'),
-  }).describe('Breakdown of the match score by category.'),
-  suggestions: z.object({
-    keywordsToAdd: z.array(z.string()).describe('Keywords to add to the CV.'),
-    skillsToEmphasize: z.array(z.string()).describe('Skills to emphasize in the CV.'),
-    experienceToDetail: z.string().describe('Experience to detail in the CV.'),
-  }).describe('Suggestions on how to improve the CV.'),
-});
+// Define the output type by inferring from the imported schema
 export type AnalyzeCvOutput = z.infer<typeof AnalyzeCvOutputSchema>;
 
 
@@ -76,7 +64,7 @@ const prompt = ai.definePrompt({
     schema: AnalyzeCvInputSchema, // Keep input schema the same
   },
   output: {
-    schema: AnalyzeCvOutputSchema, // Use updated output schema
+    schema: AnalyzeCvOutputSchema, // Use updated output schema from import
   },
   prompt: `You are an expert career advisor specializing in CV analysis against job descriptions. Your task is to analyze the provided CV Text against the Job Description Text.
 
@@ -112,11 +100,11 @@ Respond strictly in the JSON format defined by the output schema. Ensure all fie
 
 const analyzeCvFlow = ai.defineFlow<
   typeof AnalyzeCvInputSchema,
-  typeof AnalyzeCvOutputSchema
+  typeof AnalyzeCvOutputSchema // Use the inferred type here
 >({
   name: 'analyzeCvFlow',
   inputSchema: AnalyzeCvInputSchema,
-  outputSchema: AnalyzeCvOutputSchema, // Use updated output schema
+  outputSchema: AnalyzeCvOutputSchema, // Use updated output schema from import
 }, async input => {
   console.log('[analyzeCvFlow] Calling prompt for CV analysis with score breakdown...');
   const { output } = await prompt(input);
