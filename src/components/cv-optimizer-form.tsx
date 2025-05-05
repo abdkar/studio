@@ -68,7 +68,10 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
 
     if (!file) return;
 
+    console.log(`[CvOptimizerForm] File selected: ${file.name}, Type: ${file.type}`);
+
     if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
+      console.warn(`[CvOptimizerForm] Invalid file type: ${file.type}`);
       toast({
         variant: "destructive",
         title: "Invalid File Type",
@@ -79,16 +82,19 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
 
     // Handle TXT file
     if (file.type === 'text/plain') {
+       console.log(`[CvOptimizerForm] Reading TXT file: ${file.name}`);
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
         form.setValue('cvText', text, { shouldValidate: true });
+        console.log(`[CvOptimizerForm] TXT file read successfully. Length: ${text?.length ?? 0}`);
         toast({
           title: "TXT File Loaded",
           description: "CV content loaded successfully from the .txt file.",
         });
       };
-      reader.onerror = () => {
+      reader.onerror = (e) => {
+         console.error('[CvOptimizerForm] Error reading TXT file:', e);
          toast({
           variant: "destructive",
           title: "File Read Error",
@@ -101,42 +107,47 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
     else if (file.type === 'application/pdf') {
       setIsParsingPdf(true);
       form.setValue('cvText', '', { shouldValidate: false }); // Clear existing text
+      console.log(`[CvOptimizerForm] Starting PDF parsing for: ${file.name}`);
       const formData = new FormData();
       formData.append('pdfFile', file);
 
       try {
-        console.log('Calling parsePdfAction...');
+        console.log('[CvOptimizerForm] Calling parsePdfAction...');
         const result = await parsePdfAction(formData);
-        console.log('parsePdfAction result:', result);
+        console.log('[CvOptimizerForm] parsePdfAction result:', result);
 
-        if (result.success && result.text) {
-          form.setValue('cvText', result.text, { shouldValidate: true });
-          toast({
-            title: "PDF Parsed Successfully",
-            description: "CV content extracted from the PDF file.",
-          });
-        } else if (result.success && !result.text) {
-          // Handle successful parse but no text extracted (e.g., image PDF)
-          form.setValue('cvText', '', { shouldValidate: true }); // Keep field empty
-          toast({
-            variant: "default", // Use default variant, not destructive
-            title: "PDF Parsed, No Text Found",
-            description: result.error || "Could not extract text. The PDF might be image-based. Please paste the text manually.",
-            duration: 9000,
-          });
-        }
-         else {
-           // Handle explicit failure
+        if (result.success) {
+          if (result.text && result.text.length > 0) {
+            form.setValue('cvText', result.text, { shouldValidate: true });
+            console.log(`[CvOptimizerForm] PDF parsed successfully. Text length: ${result.text.length}`);
+            toast({
+              title: "PDF Parsed Successfully",
+              description: "CV content extracted from the PDF file.",
+            });
+          } else {
+             // Handle successful parse but no text extracted (e.g., image PDF)
+             form.setValue('cvText', '', { shouldValidate: true }); // Keep field empty
+             console.warn(`[CvOptimizerForm] PDF parsed but no text found. File: ${file.name}. Error from action: ${result.error}`);
+             toast({
+               variant: "default", // Use default variant, not destructive
+               title: "PDF Parsed, No Text Found",
+               description: result.error || "Could not extract text. The PDF might be image-based or corrupted. Please paste the text manually.",
+               duration: 9000,
+             });
+          }
+        } else {
+           // Handle explicit failure from the action
+           console.error(`[CvOptimizerForm] PDF parsing failed. Error: ${result.error}`);
            toast({
              variant: "destructive",
              title: "PDF Parsing Failed",
-             description: result.error || "Could not extract text from PDF. Please paste it manually.",
+             description: result.error || "Could not extract text from PDF. Please ensure it's a valid PDF and try pasting manually.",
+             duration: 9000,
            });
-           // Optionally clear the field again or leave it empty
            form.setValue('cvText', '', { shouldValidate: true });
         }
       } catch (error) {
-        console.error('Error calling parsePdfAction:', error);
+        console.error('[CvOptimizerForm] Error calling parsePdfAction client-side:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         toast({
           variant: "destructive",
@@ -145,11 +156,13 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
         });
          form.setValue('cvText', '', { shouldValidate: true });
       } finally {
+        console.log('[CvOptimizerForm] PDF parsing finished.');
         setIsParsingPdf(false);
       }
     }
     // Handle DOC/DOCX file (manual copy-paste)
     else if (file.type === 'application/msword' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+       console.log(`[CvOptimizerForm] DOC/DOCX file uploaded: ${file.name}. Prompting user to paste.`);
        toast({
          variant: "default",
          title: "File Uploaded",
@@ -164,22 +177,29 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
   async function onSubmit(values: z.infer<typeof formSchema>) {
     onAnalysisStart();
     try {
-      console.log('Submitting for analysis:', values);
+      // Log the values being sent to the AI, especially the cvText
+      console.log('[CvOptimizerForm] Submitting for analysis. CV Text length:', values.cvText.length);
+       if (values.cvText.length < 200) { // Log beginning of short CVs for inspection
+            console.log('[CvOptimizerForm] Submitting CV Text (first 200 chars):', values.cvText.substring(0, 200));
+        }
+      console.log('[CvOptimizerForm] Submitting Job Description Text length:', values.jobDescriptionText.length);
+
       const result = await analyzeCv(values);
-      console.log('Analysis result:', result);
+      console.log('[CvOptimizerForm] Analysis result received:', result);
       onAnalysisComplete(result, null);
        toast({
         title: "Analysis Complete",
         description: "Your CV has been analyzed successfully.",
       });
     } catch (error) {
-      console.error('Error analyzing CV:', error);
+      console.error('[CvOptimizerForm] Error analyzing CV:', error);
        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during analysis.';
       onAnalysisComplete(null, `Analysis failed: ${errorMessage}. Please check the input and try again.`);
       toast({
         variant: "destructive",
         title: "Analysis Error",
         description: `An error occurred: ${errorMessage}. Please try again.`,
+        duration: 9000,
       });
     }
   }
