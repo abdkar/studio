@@ -105,14 +105,28 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
       formData.append('pdfFile', file);
 
       try {
+        console.log('Calling parsePdfAction...');
         const result = await parsePdfAction(formData);
+        console.log('parsePdfAction result:', result);
+
         if (result.success && result.text) {
           form.setValue('cvText', result.text, { shouldValidate: true });
           toast({
             title: "PDF Parsed Successfully",
             description: "CV content extracted from the PDF file.",
           });
-        } else {
+        } else if (result.success && !result.text) {
+          // Handle successful parse but no text extracted (e.g., image PDF)
+          form.setValue('cvText', '', { shouldValidate: true }); // Keep field empty
+          toast({
+            variant: "default", // Use default variant, not destructive
+            title: "PDF Parsed, No Text Found",
+            description: result.error || "Could not extract text. The PDF might be image-based. Please paste the text manually.",
+            duration: 9000,
+          });
+        }
+         else {
+           // Handle explicit failure
            toast({
              variant: "destructive",
              title: "PDF Parsing Failed",
@@ -123,10 +137,11 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
         }
       } catch (error) {
         console.error('Error calling parsePdfAction:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         toast({
           variant: "destructive",
           title: "PDF Parsing Error",
-          description: "An unexpected error occurred while parsing the PDF. Please paste the text manually.",
+          description: `An unexpected error occurred: ${errorMessage}. Please paste the text manually.`,
         });
          form.setValue('cvText', '', { shouldValidate: true });
       } finally {
@@ -149,7 +164,9 @@ export function CvOptimizerForm({ onAnalysisStart, onAnalysisComplete }: CvOptim
   async function onSubmit(values: z.infer<typeof formSchema>) {
     onAnalysisStart();
     try {
+      console.log('Submitting for analysis:', values);
       const result = await analyzeCv(values);
+      console.log('Analysis result:', result);
       onAnalysisComplete(result, null);
        toast({
         title: "Analysis Complete",
