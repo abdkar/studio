@@ -46,8 +46,9 @@ export function CvAnalysisResults({ result, isLoading, error }: CvAnalysisResult
     );
   }
 
+  // Only render the card if there is a result
   if (!result) {
-    return null; // Don't render anything if there's no result, error, or loading state
+    return null;
   }
 
   const { matchPercentage, suggestions } = result;
@@ -80,7 +81,7 @@ export function CvAnalysisResults({ result, isLoading, error }: CvAnalysisResult
           <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Lightbulb className="text-accent" /> Improvement Suggestions
           </h3>
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion type="single" collapsible className="w-full" defaultValue='keywords'> {/* Default open keywords */}
             {suggestions.keywordsToAdd && suggestions.keywordsToAdd.length > 0 && (
               <AccordionItem value="keywords">
                 <AccordionTrigger className="text-base hover:no-underline">
