@@ -16,10 +16,11 @@ import {
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { analyzeCv, type AnalyzeCvOutput } from '@/ai/flows/cv-analyzer'; // Corrected import path
-import { createCv, type CreateCvOutput } from '@/ai/flows/create-cv-flow'; // Import create CV flow
-import { parsePdfAction } from '@/actions/parse-pdf'; // Import the server action
-import { Loader2, Upload, FileText, FileCheck2 } from 'lucide-react'; // Added icons
+import { analyzeCv, type AnalyzeCvOutput } from '@/ai/flows/cv-analyzer';
+import { createCv, type CreateCvOutput } from '@/ai/flows/create-cv-flow';
+import { createCoverLetter, type CreateCoverLetterOutput } from '@/ai/flows/create-cover-letter-flow'; // Import create cover letter flow
+import { parsePdfAction } from '@/actions/parse-pdf';
+import { Loader2, Upload, FileText, FileCheck2, Mail } from 'lucide-react'; // Added Mail icon
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
@@ -31,12 +32,11 @@ const formSchema = z.object({
   }),
 });
 
-// Allowed MIME types and extensions
 const ACCEPTED_FILE_TYPES = [
-  'text/plain', // .txt
-  'application/pdf', // .pdf
-  'application/msword', // .doc
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+  'text/plain',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
 const ACCEPTED_EXTENSIONS_STRING = '.txt, .pdf, .doc, .docx';
 
@@ -44,10 +44,13 @@ const ACCEPTED_EXTENSIONS_STRING = '.txt, .pdf, .doc, .docx';
 type CvOptimizerFormProps = {
   onAnalysisStart: () => void;
   onAnalysisComplete: (result: AnalyzeCvOutput | null, error: string | null) => void;
-  onCreationStart: () => void; // New prop for creation start
-  onCreationComplete: (result: string | null, error: string | null) => void; // Prop type remains string (for Markdown)
-  isAnalyzing: boolean; // Pass loading state for analysis
-  isCreating: boolean; // Pass loading state for creation
+  onCreationStart: () => void;
+  onCreationComplete: (result: string | null, error: string | null) => void;
+  onCoverLetterStart: () => void; // New prop for cover letter start
+  onCoverLetterComplete: (result: string | null, error: string | null) => void; // New prop for cover letter complete
+  isAnalyzing: boolean;
+  isCreating: boolean;
+  isCreatingCoverLetter: boolean; // Pass loading state for cover letter
 };
 
 export function CvOptimizerForm({
@@ -55,8 +58,11 @@ export function CvOptimizerForm({
   onAnalysisComplete,
   onCreationStart,
   onCreationComplete,
+  onCoverLetterStart,
+  onCoverLetterComplete,
   isAnalyzing,
   isCreating,
+  isCreatingCoverLetter,
 }: CvOptimizerFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -67,12 +73,12 @@ export function CvOptimizerForm({
   });
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isParsingPdf, setIsParsingPdf] = useState(false); // State for PDF parsing loading
+  const [isParsingPdf, setIsParsingPdf] = useState(false);
 
-  const { formState: { isSubmitting: isFormSubmitting, errors }, trigger, getValues } = form; // Use trigger and getValues
+  const { formState: { isSubmitting: isFormSubmitting, errors }, trigger, getValues } = form;
 
-   // Combined loading state for disabling inputs
-   const isProcessingInput = isAnalyzing || isCreating || isParsingPdf || isFormSubmitting;
+   // Combined loading state for disabling inputs and buttons
+   const isProcessingInput = isAnalyzing || isCreating || isCreatingCoverLetter || isParsingPdf || isFormSubmitting;
 
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,7 +101,6 @@ export function CvOptimizerForm({
       return;
     }
 
-    // Handle TXT file
     if (file.type === 'text/plain') {
        console.log(`[CvOptimizerForm] Reading TXT file: ${file.name}`);
       const reader = new FileReader();
@@ -118,10 +123,9 @@ export function CvOptimizerForm({
       }
       reader.readAsText(file);
     }
-    // Handle PDF file
     else if (file.type === 'application/pdf') {
       setIsParsingPdf(true);
-      form.setValue('cvText', '', { shouldValidate: false }); // Clear existing text
+      form.setValue('cvText', '', { shouldValidate: false });
       console.log(`[CvOptimizerForm] Starting PDF parsing for: ${file.name}`);
       const formData = new FormData();
       formData.append('pdfFile', file);
@@ -140,21 +144,18 @@ export function CvOptimizerForm({
               description: "CV content extracted from the PDF file.",
             });
           } else {
-             // Handle successful parse but no text extracted (e.g., image PDF)
-             form.setValue('cvText', '', { shouldValidate: true }); // Keep field empty but validate to show potential errors if field is required
+             form.setValue('cvText', '', { shouldValidate: true });
              console.warn(`[CvOptimizerForm] PDF parsed but no text found. File: ${file.name}. Error from action: ${result.error}`);
              toast({
-               variant: "default", // Use default variant, not destructive
+               variant: "default",
                title: "PDF Parsed, No Text Found",
                description: result.error || "Could not extract text. The PDF might be image-based or corrupted. Please paste the text manually.",
                duration: 9000,
              });
-             // Trigger validation after setting empty value if needed
              trigger('cvText');
           }
         } else {
-           // Handle explicit failure from the action
-           // Removed console.error log here as the toast below handles user notification
+           // Use toast for user notification, avoid redundant console error here
            toast({
              variant: "destructive",
              title: "PDF Parsing Failed",
@@ -162,7 +163,7 @@ export function CvOptimizerForm({
              duration: 9000,
            });
            form.setValue('cvText', '', { shouldValidate: true });
-           trigger('cvText'); // Trigger validation after setting empty value
+           trigger('cvText');
         }
       } catch (error) {
         console.error('[CvOptimizerForm] Error calling parsePdfAction client-side:', error);
@@ -173,13 +174,12 @@ export function CvOptimizerForm({
           description: `An unexpected error occurred: ${errorMessage}. Please paste the text manually.`,
         });
          form.setValue('cvText', '', { shouldValidate: true });
-         trigger('cvText'); // Trigger validation on error
+         trigger('cvText');
       } finally {
         console.log('[CvOptimizerForm] PDF parsing finished.');
         setIsParsingPdf(false);
       }
     }
-    // Handle DOC/DOCX file (manual copy-paste)
     else if (file.type === 'application/msword' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
        console.log(`[CvOptimizerForm] DOC/DOCX file uploaded: ${file.name}. Prompting user to paste.`);
        toast({
@@ -188,7 +188,6 @@ export function CvOptimizerForm({
          description: `Uploaded ${file.name}. Please copy the text from your Word document and paste it into the CV text area above. Automatic extraction is not supported for DOC/DOCX files.`,
          duration: 9000,
        });
-       // Clear the CV text field to prompt manual paste
        form.setValue('cvText', '', { shouldValidate: false });
     }
   };
@@ -196,7 +195,6 @@ export function CvOptimizerForm({
 
   // Function to handle Analyze CV button click
   const handleAnalyzeClick = async () => {
-      // Manually trigger validation for all fields
       const isValid = await trigger();
       if (!isValid) {
           console.log('[CvOptimizerForm] Validation failed before analysis.');
@@ -205,18 +203,13 @@ export function CvOptimizerForm({
                 title: "Validation Error",
                 description: "Please fill in all required fields correctly before analyzing.",
             });
-          return; // Don't proceed if validation fails
+          return;
       }
 
-      const values = getValues(); // Get current form values after validation
+      const values = getValues();
       onAnalysisStart();
       try {
-          console.log('[CvOptimizerForm] Submitting for analysis. CV Text length:', values.cvText.length);
-          if (values.cvText.length < 200) {
-              console.log('[CvOptimizerForm] Submitting CV Text (first 200 chars):', values.cvText.substring(0, 200));
-          }
-          console.log('[CvOptimizerForm] Submitting Job Description Text length:', values.jobDescriptionText.length);
-
+          console.log('[CvOptimizerForm] Submitting for analysis...');
           const result = await analyzeCv(values);
           console.log('[CvOptimizerForm] Analysis result received:', result);
           onAnalysisComplete(result, null);
@@ -239,7 +232,6 @@ export function CvOptimizerForm({
 
  // Function to handle Create Tailored CV button click
  const handleCreateClick = async () => {
-      // Manually trigger validation for all fields
      const isValid = await trigger();
      if (!isValid) {
          console.log('[CvOptimizerForm] Validation failed before creation.');
@@ -248,18 +240,16 @@ export function CvOptimizerForm({
                 title: "Validation Error",
                 description: "Please fill in all required fields correctly before creating the CV.",
          });
-         return; // Don't proceed if validation fails
+         return;
      }
 
-     const values = getValues(); // Get current form values after validation
+     const values = getValues();
      onCreationStart();
      try {
-         console.log('[CvOptimizerForm] Submitting for CV creation. CV Text length:', values.cvText.length);
-         console.log('[CvOptimizerForm] Submitting Job Description Text length:', values.jobDescriptionText.length);
-
-         const result: CreateCvOutput = await createCv(values); // Call the createCv flow, result has generatedCvMarkdown
-         console.log('[CvOptimizerForm] CV creation result received. Generated Markdown length:', result.generatedCvMarkdown.length);
-         onCreationComplete(result.generatedCvMarkdown, null); // Pass the Markdown content
+         console.log('[CvOptimizerForm] Submitting for CV creation...');
+         const result: CreateCvOutput = await createCv(values);
+         console.log('[CvOptimizerForm] CV creation result received.');
+         onCreationComplete(result.generatedCvMarkdown, null);
          toast({
              title: "CV Creation Complete",
              description: "A tailored, ATS-friendly CV has been generated.",
@@ -277,8 +267,45 @@ export function CvOptimizerForm({
      }
  };
 
+ // Function to handle Create Cover Letter button click
+ const handleCreateCoverLetterClick = async () => {
+    const isValid = await trigger();
+    if (!isValid) {
+        console.log('[CvOptimizerForm] Validation failed before cover letter creation.');
+        toast({
+            variant: "destructive",
+            title: "Validation Error",
+            description: "Please fill in all required fields correctly before creating the cover letter.",
+        });
+        return;
+    }
+
+    const values = getValues();
+    onCoverLetterStart();
+    try {
+        console.log('[CvOptimizerForm] Submitting for Cover Letter creation...');
+        const result: CreateCoverLetterOutput = await createCoverLetter(values);
+        console.log('[CvOptimizerForm] Cover Letter creation result received.');
+        onCoverLetterComplete(result.generatedCoverLetterText, null);
+        toast({
+            title: "Cover Letter Creation Complete",
+            description: "A tailored cover letter has been generated.",
+        });
+    } catch (error) {
+        console.error('[CvOptimizerForm] Error creating cover letter:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during cover letter creation.';
+        onCoverLetterComplete(null, `Cover Letter creation failed: ${errorMessage}. Please check the input and try again.`);
+        toast({
+            variant: "destructive",
+            title: "Cover Letter Creation Error",
+            description: `An error occurred: ${errorMessage}. Please try again.`,
+            duration: 9000,
+        });
+    }
+};
+
+
   return (
-    // Note: Removed onSubmit from <form> tag as we handle submissions via button clicks
     <Form {...form}>
       <form className="space-y-6">
         {/* CV Text Area */}
@@ -293,10 +320,10 @@ export function CvOptimizerForm({
                   placeholder="Paste the full text of your CV here, or upload a TXT/PDF file below. PDF text will be extracted automatically."
                   className="min-h-[200px] resize-y bg-white"
                   {...field}
-                  disabled={isProcessingInput} // Disable textarea during any processing
+                  disabled={isProcessingInput}
                 />
               </FormControl>
-               {isParsingPdf && ( // Show parsing indicator
+               {isParsingPdf && (
                   <div className="flex items-center text-sm text-muted-foreground mt-1">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Parsing PDF, please wait...
@@ -321,15 +348,12 @@ export function CvOptimizerForm({
                onChange={handleFileChange}
                className="hidden"
                ref={fileInputRef}
-               disabled={isProcessingInput} // Disable file input during processing
+               disabled={isProcessingInput}
              />
            </FormControl>
             <FormDescription>
                 Upload TXT or PDF for automatic text extraction. For DOC/DOCX, please upload and then manually copy/paste the text into the field above.
             </FormDescription>
-           {/* Display validation errors specifically for the file upload if needed,
-               though the main cvText validation usually covers it unless you add specific file validation */}
-            {/* <FormMessage /> */}
          </FormItem>
 
 
@@ -345,7 +369,7 @@ export function CvOptimizerForm({
                   placeholder="Paste the full text of the job description here..."
                   className="min-h-[200px] resize-y bg-white"
                   {...field}
-                  disabled={isProcessingInput} // Disable JD during any processing
+                  disabled={isProcessingInput}
                 />
               </FormControl>
               <FormMessage />
@@ -354,13 +378,13 @@ export function CvOptimizerForm({
         />
 
          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4"> {/* Use grid for equal width */}
               {/* Analyze Button */}
               <Button
-                  type="button" // Change type to button to prevent form submission
+                  type="button"
                   onClick={handleAnalyzeClick}
-                  disabled={isProcessingInput} // Disable if any processing is happening
-                  className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground" // Use accent color
+                  disabled={isProcessingInput}
+                  className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" // Use accent color
               >
                   {isAnalyzing ? (
                       <>
@@ -369,7 +393,7 @@ export function CvOptimizerForm({
                       </>
                   ) : (
                       <>
-                          <FileText className="mr-2 h-4 w-4" /> {/* Analysis Icon */}
+                          <FileText className="mr-2 h-4 w-4" />
                           Analyze CV
                       </>
                   )}
@@ -377,10 +401,10 @@ export function CvOptimizerForm({
 
                {/* Create Tailored CV Button */}
                <Button
-                  type="button" // Change type to button
+                  type="button"
                   onClick={handleCreateClick}
-                  disabled={isProcessingInput} // Disable if any processing is happening
-                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground" // Use primary color
+                  disabled={isProcessingInput}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" // Use primary color
               >
                   {isCreating ? (
                       <>
@@ -389,8 +413,28 @@ export function CvOptimizerForm({
                       </>
                   ) : (
                        <>
-                          <FileCheck2 className="mr-2 h-4 w-4" /> {/* Creation Icon */}
+                          <FileCheck2 className="mr-2 h-4 w-4" />
                           Create Tailored CV
+                       </>
+                  )}
+              </Button>
+
+              {/* Create Cover Letter Button */}
+               <Button
+                  type="button"
+                  onClick={handleCreateCoverLetterClick}
+                  disabled={isProcessingInput}
+                  className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground" // Use secondary color
+              >
+                  {isCreatingCoverLetter ? (
+                      <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating Letter...
+                      </>
+                  ) : (
+                       <>
+                          <Mail className="mr-2 h-4 w-4" /> {/* Mail Icon */}
+                          Create Cover Letter
                        </>
                   )}
               </Button>
