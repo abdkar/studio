@@ -19,7 +19,7 @@ export type CreateCoverLetterInput = z.infer<typeof CreateCoverLetterInputSchema
 
 // Define the output schema for the cover letter generation flow
 const CreateCoverLetterOutputSchema = z.object({
-  generatedCoverLetterText: z.string().describe('The generated cover letter text, formatted for ATS compatibility (plain text or simple Markdown).'),
+  generatedCoverLetterText: z.string().describe('The generated cover letter text, formatted as plain text for maximum ATS compatibility.'),
 });
 export type CreateCoverLetterOutput = z.infer<typeof CreateCoverLetterOutputSchema>;
 
@@ -61,34 +61,34 @@ const prompt = ai.definePrompt({
   },
   prompt: `You are an expert career advisor specializing in writing compelling, Applicant Tracking System (ATS)-friendly cover letters tailored to specific job descriptions.
 
-Your task is to generate a cover letter based on the provided **Candidate CV Text** and the **Target Job Description Text**.
+Your task is to generate a cover letter based on the provided **Candidate CV Text** and the **Target Job Description Text**. The output MUST be plain text.
 
 **Instructions:**
 
 1.  **Analyze Job Description:** Carefully read the **Target Job Description Text** to understand the required skills, qualifications, experience, keywords, and company culture.
 2.  **Review CV:** Read the **Candidate CV Text**. Identify the candidate's name (look for standard name formats near the beginning or contact information sections). Extract relevant experiences, skills, and achievements that directly align with the requirements found in the job description.
-3.  **Draft Cover Letter Structure:** Follow a standard professional cover letter format:
-    *   **Contact Information (Implied):** You don't need to generate this section, but assume the candidate's name (extracted from the CV) and contact details would be at the top.
-    *   **Date:** (Optional, can be omitted for simplicity)
-    *   **Hiring Manager/Company Address:** (If not available, use a generic salutation like "Dear Hiring Manager," or "Dear [Company Name] Team,").
-    *   **Salutation:** Address the hiring manager by name if possible, otherwise use a professional greeting.
-    *   **Introduction (Paragraph 1):** State the specific job title you are applying for and where you saw the advertisement. Briefly express your strong interest in the role and the company.
-    *   **Body Paragraphs (Paragraphs 2-3):** This is the core section.
+3.  **Draft Cover Letter Structure (Plain Text):** Follow a standard professional cover letter format using ONLY plain text and standard paragraph breaks:
+    *   **Contact Information (Candidate - Optional):** You MAY include the candidate's name, phone, and email at the top if easily identifiable in the CV, each on a new line. If not clear, omit this section.
+    *   **Date:** Include the current date (e.g., "Month DD, YYYY") on a new line if easily determinable or just use a placeholder like "[Date]".
+    *   **Hiring Manager/Company Address (Optional):** Include recipient details if clearly identifiable in the job description, each on a new line. If not available, omit this section.
+    *   **Salutation:** Address the hiring manager by name if possible (e.g., "Dear [Mr./Ms./Mx. Last Name],"), otherwise use a generic professional greeting like "Dear Hiring Manager," or "Dear [Company Name] Team,". Follow with a blank line.
+    *   **Introduction (Paragraph 1):** State the specific job title you are applying for and where you saw the advertisement. Briefly express your strong interest in the role and the company. End paragraph with a blank line.
+    *   **Body Paragraphs (Paragraphs 2-3):** This is the core section. Use separate paragraphs for distinct points, separated by blank lines.
         *   **Connect CV to Job Description:** Highlight 2-3 key qualifications or experiences from the **Candidate CV Text** that directly match the most important requirements in the **Target Job Description Text**.
         *   **Use Keywords:** Naturally integrate keywords and specific terminology from the job description.
         *   **Quantify Achievements:** Use specific examples and quantify achievements from the CV whenever possible (e.g., "managed a team of 5," "increased efficiency by 15%").
         *   **Show Enthusiasm:** Briefly explain *why* you are interested in *this specific role* and *this company*, referencing aspects from the job description or company information if provided.
-    *   **Conclusion (Paragraph 4):** Reiterate your enthusiasm and suitability for the role. Mention your attached CV. Express your desire for an interview to discuss your qualifications further.
-    *   **Closing:** Use a professional closing like "Sincerely," or "Regards,".
-    *   **Signature:** Type the candidate's full name (extracted from the CV).
-4.  **ATS-Friendly Formatting:**
-    *   **Plain Text Focus:** Use clear, simple language. Avoid complex sentence structures where possible.
-    *   **No Fancy Formatting:** Do **NOT** use tables, columns, images, headers, footers, text boxes, or unusual fonts/characters. Stick to standard paragraph breaks. Use simple Markdown like bold (\`**bold**\`) sparingly for emphasis if needed, but prioritize plain text compatibility.
-    *   **Standard Font/Size (Implied):** Assume the output will be used in systems expecting standard fonts (like Arial, Calibri, Times New Roman) and readable sizes (10-12pt).
+    *   **Conclusion (Paragraph 4):** Reiterate your enthusiasm and suitability for the role. Mention your attached CV. Express your desire for an interview to discuss your qualifications further. End paragraph with a blank line.
+    *   **Closing:** Use a professional closing like "Sincerely," or "Regards," on a new line.
+    *   **Signature:** Type the candidate's full name (extracted from the CV) on a new line below the closing.
+4.  **Strictly ATS-Friendly Formatting (Plain Text ONLY):**
+    *   **Plain Text ONLY:** Output MUST be plain text. Use clear, simple language.
+    *   **NO Formatting:** Do **NOT** use Markdown, HTML, bold, italics, lists, tables, columns, images, headers, footers, text boxes, or any special characters/symbols.
+    *   **Standard Line Breaks:** Use single blank lines to separate paragraphs, the date, addresses, salutation, closing, and signature. Do not use multiple blank lines.
     *   **Keywords:** Ensure relevant keywords from the job description are present naturally within the text.
 5.  **Tone:** Maintain a professional, confident, and enthusiastic tone.
 6.  **Proofread:** Ensure the generated text is free of grammatical errors and typos.
-7.  **Output:** Provide **only** the generated cover letter text. Do not include any introductory phrases, explanations, or code fences (\`\`\`) around the output. Start directly with the salutation or the first line of the letter body.
+7.  **Output:** Provide **only** the generated plain text cover letter. Do not include any introductory phrases, explanations, comments, or code fences (\`\`\`) around the output. Start directly with the first line of the letter (e.g., Candidate Name or Date).
 
 
 **Candidate CV Text:**
@@ -101,7 +101,7 @@ Your task is to generate a cover letter based on the provided **Candidate CV Tex
 {{{jobDescriptionText}}}
 \`\`\`
 
-**Generated ATS-Friendly Cover Letter Text:**
+**Generated ATS-Friendly Cover Letter (Plain Text Only):**
 `,
 });
 
@@ -130,9 +130,10 @@ const createCoverLetterFlow = ai.defineFlow<
       console.warn('[createCoverLetterFlow] Generated cover letter seems unusually short:', output.generatedCoverLetterText.length);
     }
 
-    // Trim whitespace
-    output.generatedCoverLetterText = output.generatedCoverLetterText.trim();
+    // Trim whitespace and ensure consistent line endings (optional but good practice)
+    output.generatedCoverLetterText = output.generatedCoverLetterText.trim().replace(/\r\n/g, '\n');
 
     return output;
   }
 );
+
