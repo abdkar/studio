@@ -154,7 +154,7 @@ export function CvOptimizerForm({
           }
         } else {
            // Handle explicit failure from the action
-           console.error(`[CvOptimizerForm] PDF parsing failed. Error: ${result.error}`);
+           // Removed console.error log here as the toast below handles user notification
            toast({
              variant: "destructive",
              title: "PDF Parsing Failed",
