@@ -82,7 +82,7 @@ export function CvOptimizerForm({
     // Use values from props for initial state and ensure sync
     values: {
         cvText: cvText,
-        jobDescriptionText: jobDescText
+        jobDescriptionText: jobDescText // Use jobDescText here to match schema
     },
   });
   const { toast } = useToast();
@@ -91,16 +91,14 @@ export function CvOptimizerForm({
 
   const { formState: { isSubmitting: isFormSubmitting, errors }, trigger, getValues, setValue } = form;
 
-   // Use form's watch or props directly? For simplicity, use props for read, call prop setters on change
-   // const watchedCvText = form.watch('cvText');
-   // const watchedJobDescText = form.watch('jobDescriptionText');
-
    // Sync form state with parent state when props change (e.g., from PDF parsing)
    React.useEffect(() => {
+       // Use 'jobDescriptionText' for form state key to match schema
        setValue('cvText', cvText, { shouldValidate: true, shouldDirty: true });
    }, [cvText, setValue]);
 
     React.useEffect(() => {
+         // Use 'jobDescriptionText' for form state key to match schema
          setValue('jobDescriptionText', jobDescText, { shouldValidate: true, shouldDirty: true });
      }, [jobDescText, setValue]);
 
@@ -190,7 +188,7 @@ export function CvOptimizerForm({
           }
         } else {
            // Log error and show toast
-           console.error(`[CvOptimizerForm] PDF parsing failed on server. Error from action: ${result.error}`); // Log the error message from the action
+           console.error(`[CvOptimizerForm] PDF parsing failed. Error: ${result.error}`); // Log the error message from the action
            toast({
              variant: "destructive",
              title: "PDF Parsing Failed",
@@ -245,7 +243,8 @@ export function CvOptimizerForm({
           return;
       }
 
-      const values = { cvText, jobDescriptionText }; // Use state props
+      // Use the prop names as destructured: cvText, jobDescText
+      const values = { cvText, jobDescriptionText: jobDescText };
       onAnalysisStart();
       try {
           console.log('[CvOptimizerForm] Submitting for analysis...');
@@ -283,7 +282,8 @@ export function CvOptimizerForm({
          return;
      }
 
-     const values = { cvText, jobDescriptionText }; // Use state props
+     // Use the prop names as destructured: cvText, jobDescText
+     const values = { cvText, jobDescriptionText: jobDescText };
      onCreationStart();
      try {
          console.log('[CvOptimizerForm] Submitting for CV creation...');
@@ -321,7 +321,8 @@ export function CvOptimizerForm({
         return;
     }
 
-    const values = { cvText, jobDescriptionText }; // Use state props
+    // Use the prop names as destructured: cvText, jobDescText
+    const values = { cvText, jobDescriptionText: jobDescText };
     onCoverLetterStart(); // Signal start of the process (generation + evaluation)
     try {
         console.log('[CvOptimizerForm] Submitting for Cover Letter creation...');
