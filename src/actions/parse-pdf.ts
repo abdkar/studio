@@ -1,3 +1,4 @@
+
 'use server';
 
 import { z } from 'zod';
@@ -61,7 +62,7 @@ export async function parsePdfAction(formData: FormData): Promise<PdfParseResult
     return { success: true, text: extractedText }; // Return trimmed text
   } catch (error) {
     // Log the full error for server-side debugging
-    console.error('[parsePdfAction] Error during PDF parsing process:', error);
+    console.error('[parsePdfAction] Error during PDF parsing process:', error); // Detailed log
 
     let clientErrorMessage = 'PDF parsing failed due to an unexpected server error.';
 
@@ -75,8 +76,13 @@ export async function parsePdfAction(formData: FormData): Promise<PdfParseResult
         // Avoid exposing potentially sensitive details from the raw error message.
         const limitedMessage = error.message.substring(0, 100) + (error.message.length > 100 ? '...' : '');
         clientErrorMessage = `PDF parsing failed. Please ensure the file is a valid PDF. (Details: ${limitedMessage})`;
+        console.error(`[parsePdfAction] Caught specific error type: ${error.name}, Message: ${error.message}`);
+    } else {
+        // Handle non-Error types if necessary
+        console.error('[parsePdfAction] Caught non-Error object during parsing:', error);
     }
 
-    return { success: false, error: clientErrorMessage };
+    // Ensure a valid object matching the schema is always returned
+    return { success: false, error: clientErrorMessage, text: undefined };
   }
 }

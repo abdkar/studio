@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -49,7 +50,9 @@ export async function analyzeCv(input: AnalyzeCvInput): Promise<AnalyzeCvOutput>
 
       return result;
   } catch (error) {
-     console.error('[analyzeCv] Error executing flow:', error);
+     // Log the detailed error on the server
+     console.error('[analyzeCv] Error executing flow:', error instanceof Error ? error.stack : error);
+     // Throw a more generic error to the client, but keep server logs detailed
      if (error instanceof Error) {
         throw new Error(`Failed to analyze CV: ${error.message}`);
      }

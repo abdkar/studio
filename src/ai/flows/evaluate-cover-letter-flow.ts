@@ -48,7 +48,9 @@ export async function evaluateCoverLetter(input: EvaluateCoverLetterInput): Prom
     console.log('[evaluateCoverLetter] Flow completed successfully. Relevance Score:', result.relevanceScore);
     return result;
   } catch (error) {
-    console.error('[evaluateCoverLetter] Error executing flow:', error);
+    // Log detailed error on the server
+    console.error('[evaluateCoverLetter] Error executing flow:', error instanceof Error ? error.stack : error);
+    // Throw a more generic error to the client
     if (error instanceof Error) {
       throw new Error(`Failed to evaluate cover letter: ${error.message}`);
     }

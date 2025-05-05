@@ -190,7 +190,7 @@ export function CvOptimizerForm({
           }
         } else {
            // Log error and show toast
-           console.error(`[CvOptimizerForm] PDF parsing failed on server. Error: ${result.error}`);
+           console.error(`[CvOptimizerForm] PDF parsing failed on server. Error from action: ${result.error}`); // Log the error message from the action
            toast({
              variant: "destructive",
              title: "PDF Parsing Failed",
@@ -202,6 +202,7 @@ export function CvOptimizerForm({
            trigger('cvText');
         }
       } catch (error) {
+        // Log the full error object for better debugging
         console.error('[CvOptimizerForm] Error calling parsePdfAction client-side:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         toast({
@@ -256,6 +257,7 @@ export function CvOptimizerForm({
               description: "Your CV has been analyzed successfully.",
           });
       } catch (error) {
+          // Log the full error object
           console.error('[CvOptimizerForm] Error analyzing CV:', error);
           const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during analysis.';
           onAnalysisComplete(null, `Analysis failed: ${errorMessage}. Please check the input and try again.`);
@@ -293,6 +295,7 @@ export function CvOptimizerForm({
              description: "A tailored, ATS-friendly CV has been generated.",
          });
      } catch (error) {
+         // Log the full error object
          console.error('[CvOptimizerForm] Error creating CV:', error);
          const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during CV creation.';
          onCreationComplete(null, `CV creation failed: ${errorMessage}. Please check the input and try again.`);
@@ -335,6 +338,7 @@ export function CvOptimizerForm({
             description: "A tailored cover letter has been generated and is now being evaluated.",
         });
     } catch (error) {
+        // Log the full error object
         console.error('[CvOptimizerForm] Error creating cover letter:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during cover letter creation.';
         onCoverLetterComplete(null, `Cover Letter creation failed: ${errorMessage}. Please check the input and try again.`);
@@ -475,5 +479,3 @@ export function CvOptimizerForm({
     </Form>
   );
 }
-
-```

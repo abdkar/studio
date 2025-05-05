@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Generates a tailored, ATS-friendly cover letter based on a CV, job description, and optional CV analysis results.
@@ -46,7 +47,9 @@ export async function createCoverLetter(input: CreateCoverLetterInput): Promise<
     console.log('[createCoverLetter] Flow completed successfully. Generated Cover Letter length:', result.generatedCoverLetterText.length);
     return result;
   } catch (error) {
-    console.error('[createCoverLetter] Error executing flow:', error);
+    // Log detailed error on the server
+    console.error('[createCoverLetter] Error executing flow:', error instanceof Error ? error.stack : error);
+    // Throw a more generic error to the client
     if (error instanceof Error) {
       throw new Error(`Failed to generate cover letter: ${error.message}`);
     }

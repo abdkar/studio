@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Generates a new, ATS-friendly CV tailored to a job description, formatted in Markdown.
@@ -45,11 +46,13 @@ export async function createCv(input: CreateCvInput): Promise<CreateCvOutput> {
     console.log('[createCv] Flow completed successfully. Generated CV Markdown length:', result.generatedCvMarkdown.length);
     return result;
   } catch (error) {
-    console.error('[createCv] Error executing flow:', error);
-    if (error instanceof Error) {
-       throw new Error(`Failed to generate CV: ${error.message}`);
-    }
-    throw new Error('An unknown error occurred while generating the CV.');
+     // Log detailed error on the server
+     console.error('[createCv] Error executing flow:', error instanceof Error ? error.stack : error);
+     // Throw a more generic error to the client
+     if (error instanceof Error) {
+        throw new Error(`Failed to generate CV: ${error.message}`);
+     }
+     throw new Error('An unknown error occurred while generating the CV.');
   }
 }
 
