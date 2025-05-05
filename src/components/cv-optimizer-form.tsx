@@ -45,7 +45,7 @@ type CvOptimizerFormProps = {
   onAnalysisStart: () => void;
   onAnalysisComplete: (result: AnalyzeCvOutput | null, error: string | null) => void;
   onCreationStart: () => void; // New prop for creation start
-  onCreationComplete: (result: string | null, error: string | null) => void; // New prop for creation complete
+  onCreationComplete: (result: string | null, error: string | null) => void; // Prop type remains string (for Markdown)
   isAnalyzing: boolean; // Pass loading state for analysis
   isCreating: boolean; // Pass loading state for creation
 };
@@ -257,9 +257,9 @@ export function CvOptimizerForm({
          console.log('[CvOptimizerForm] Submitting for CV creation. CV Text length:', values.cvText.length);
          console.log('[CvOptimizerForm] Submitting Job Description Text length:', values.jobDescriptionText.length);
 
-         const result = await createCv(values); // Call the createCv flow
-         console.log('[CvOptimizerForm] CV creation result received. Generated length:', result.generatedCvText.length);
-         onCreationComplete(result.generatedCvText, null);
+         const result: CreateCvOutput = await createCv(values); // Call the createCv flow, result has generatedCvMarkdown
+         console.log('[CvOptimizerForm] CV creation result received. Generated Markdown length:', result.generatedCvMarkdown.length);
+         onCreationComplete(result.generatedCvMarkdown, null); // Pass the Markdown content
          toast({
              title: "CV Creation Complete",
              description: "A tailored, ATS-friendly CV has been generated.",

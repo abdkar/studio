@@ -14,8 +14,8 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
-  // State for CV creation
-  const [generatedCv, setGeneratedCv] = useState<string | null>(null);
+  // State for CV creation (now storing Markdown)
+  const [generatedCvMarkdown, setGeneratedCvMarkdown] = useState<string | null>(null);
   const [isCreatingCv, setIsCreatingCv] = useState(false);
   const [creationError, setCreationError] = useState<string | null>(null);
 
@@ -24,7 +24,7 @@ export default function Home() {
     setAnalysisError(null);
     setAnalysisResult(null); // Clear previous analysis results
      // Optionally clear generated CV when starting analysis
-     setGeneratedCv(null);
+     setGeneratedCvMarkdown(null);
      setCreationError(null);
   };
 
@@ -37,14 +37,15 @@ export default function Home() {
    const handleCreationStart = () => {
     setIsCreatingCv(true);
     setCreationError(null);
-    setGeneratedCv(null); // Clear previous generated CV
+    setGeneratedCvMarkdown(null); // Clear previous generated CV
      // Optionally clear analysis results when starting creation
      setAnalysisResult(null);
      setAnalysisError(null);
   };
 
-  const handleCreationComplete = (result: string | null, err: string | null) => {
-    setGeneratedCv(result);
+  // Update handler to receive Markdown
+  const handleCreationComplete = (markdown: string | null, err: string | null) => {
+    setGeneratedCvMarkdown(markdown);
     setCreationError(err);
     setIsCreatingCv(false);
   };
@@ -86,15 +87,15 @@ export default function Home() {
 
 
         {/* Separator only if both sections might appear */}
-        {(analysisResult || isAnalyzing || analysisError) && (generatedCv || isCreatingCv || creationError) && (
+        {(analysisResult || isAnalyzing || analysisError) && (generatedCvMarkdown || isCreatingCv || creationError) && (
            <Separator className="my-6" />
         )}
 
 
         {/* Generated CV Section */}
-        {(generatedCv || isCreatingCv || creationError) && (
+        {(generatedCvMarkdown || isCreatingCv || creationError) && (
             <GeneratedCvDisplay
-                cvText={generatedCv}
+                cvMarkdown={generatedCvMarkdown} // Pass Markdown instead of plain text
                 isLoading={isCreatingCv}
                 error={creationError}
             />
