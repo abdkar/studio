@@ -77,7 +77,7 @@ Your task is to generate a cover letter based on the provided **Candidate CV Tex
 *   **Score Breakdown:** Experience: {{analysisResults.scoreBreakdown.experience}}%, Education: {{analysisResults.scoreBreakdown.education}}%, Skills: {{analysisResults.scoreBreakdown.skills}}%
 *   **Keywords to Add/Emphasize:** {{#each analysisResults.suggestions.keywordsToAdd}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 *   **Skills to Highlight:** {{#each analysisResults.suggestions.skillsToEmphasize}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
-*   **Experience to Detail:** {{analysisResults.suggestions.experienceToDetail}}
+*   **Experience to Detail (includes suggested summary):** {{{analysisResults.suggestions.experienceToDetail}}}
 
 Use these analysis points to strategically highlight the candidate's strengths identified in the CV that align best with the job description, address potential gaps implicitly by focusing on related strengths, and incorporate the suggested keywords naturally.
 {{/if}}
@@ -106,8 +106,9 @@ Use these analysis points to strategically highlight the candidate's strengths i
     *   **Standard Line Breaks:** Use single blank lines to separate paragraphs, the date, addresses, salutation, closing, and signature. Do not use multiple blank lines.
     *   **Keywords:** Ensure relevant keywords from the job description are present naturally within the text.
 5.  **Tone:** Maintain a professional, confident, and enthusiastic tone.
-6.  **Proofread:** Ensure the generated text is free of grammatical errors and typos.
-7.  **Output:** Provide **only** the generated plain text cover letter. Do not include any introductory phrases, explanations, comments, or code fences (\`\`\`) around the output. Start directly with the first line of the letter (e.g., Candidate Name or Date).
+6.  **Writing Style - AVOID JARGON:** Skip overused business terms and jargon. Specifically, avoid using the following words: delve, digital age, cutting-edge, leverage, proactive, pivotal, seamless, fast-paced, game-changer, quest, realm, landscape, evolve, resilient, thrill, unravel, embark, world. Focus on clear, direct language.
+7.  **Proofread:** Ensure the generated text is free of grammatical errors and typos.
+8.  **Output:** Provide **only** the generated plain text cover letter. Do not include any introductory phrases, explanations, comments, or code fences (\`\`\`) around the output. Start directly with the first line of the letter (e.g., Candidate Name or Date).
 
 
 **Candidate CV Text:**
@@ -160,3 +161,4 @@ const createCoverLetterFlow = ai.defineFlow<
 // Assuming it's defined in cv-analyzer-schema.ts
 // If not, define it here based on the structure in cv-analyzer.ts
 // export const AnalyzeCvOutputSchema = z.object({ ... }); // Define here if needed
+
