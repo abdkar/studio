@@ -60,7 +60,7 @@ export async function analyzeCv(input: AnalyzeCvInput): Promise<AnalyzeCvOutput>
   }
 }
 
-// Updated prompt to request score breakdown
+// Updated prompt to request score breakdown and a professional summary in experienceToDetail
 const prompt = ai.definePrompt({
   name: 'cvAnalyzerPrompt',
   input: {
@@ -81,7 +81,7 @@ const prompt = ai.definePrompt({
 3.  **Improvement Suggestions:** Provide actionable suggestions on how to improve the CV for this specific job:
     *   \`suggestions.keywordsToAdd\`: List specific keywords from the job description that are missing or underrepresented in the CV.
     *   \`suggestions.skillsToEmphasize\`: Identify specific skills present in the CV that should be highlighted or described in more detail to better match the job requirements.
-    *   \`suggestions.experienceToDetail\`: Describe specific areas of the candidate's experience that should be elaborated upon with more quantifiable results or context relevant to the job description.
+    *   \`suggestions.experienceToDetail\`: Describe specific areas of the candidate's experience that should be elaborated upon with more quantifiable results or context relevant to the job description. **Crucially, within this field, also generate a concise (2-3 sentences) professional summary statement that highlights the user's most relevant qualifications for this specific role based on your analysis of the CV against the job description.** This summary should be suitable for inclusion at the top of a CV.
 
 **Input Documents:**
 
@@ -96,7 +96,7 @@ const prompt = ai.definePrompt({
 \`\`\`
 
 **Output Format:**
-Respond strictly in the JSON format defined by the output schema. Ensure all fields, including the score breakdown, are populated correctly.
+Respond strictly in the JSON format defined by the output schema. Ensure all fields, including the score breakdown and the professional summary within 'experienceToDetail', are populated correctly.
 `,
 });
 
@@ -126,6 +126,12 @@ const analyzeCvFlow = ai.defineFlow<
         console.error('[analyzeCvFlow] Prompt returned incomplete score breakdown:', output.scoreBreakdown);
        throw new Error('The AI response is missing required score breakdown fields (experience, education, or skills).');
    }
+   if (!output.suggestions.experienceToDetail) {
+        console.warn('[analyzeCvFlow] Warning: suggestions.experienceToDetail is missing from the AI response.');
+        // Provide a default or handle as appropriate
+        output.suggestions.experienceToDetail = "No specific experience detailing suggestions were provided. Consider reviewing your experience section for alignment with the job description's key requirements.";
+   }
+
 
     // Ensure scores are within 0-100 range (clamp if necessary)
     output.matchPercentage = Math.max(0, Math.min(100, output.matchPercentage));
@@ -137,3 +143,4 @@ const analyzeCvFlow = ai.defineFlow<
   console.log('[analyzeCvFlow] CV analysis prompt returned successfully with score breakdown.');
   return output; // Return the full output including the breakdown
 });
+

@@ -18,9 +18,10 @@ export const AnalyzeCvOutputSchema = z.object({
   suggestions: z.object({
     keywordsToAdd: z.array(z.string()).describe('Keywords to add to the CV.'),
     skillsToEmphasize: z.array(z.string()).describe('Skills to emphasize in the CV.'),
-    experienceToDetail: z.string().describe('Experience to detail in the CV.'),
+    experienceToDetail: z.string().describe('Guidance on experience to detail, including a suggested professional summary statement that highlights the user\'s most relevant qualifications for the role, based on the CV analysis.'),
   }).describe('Suggestions on how to improve the CV.'),
 });
 
 // Note: The type 'AnalyzeCvOutput' is still defined and exported from 'cv-analyzer.ts'
 // using `z.infer<typeof AnalyzeCvOutputSchema>`. This file only exports the schema itself.
+
