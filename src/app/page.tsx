@@ -252,7 +252,7 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center bg-background text-foreground">
 
       {/* --- Hero Section --- */}
-      <section className="w-full bg-gradient-to-b from-blue-50 to-background py-16 md:py-24 lg:py-32 text-center">
+      <section className="w-full bg-gradient-to-b from-blue-50 to-background pt-16 md:pt-24 lg:pt-32 pb-8 md:pb-12 lg:pb-16 text-center">
         <div className="container mx-auto px-4 md:px-6">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary mb-4">
             Perfect Match Your CV to Any Job
@@ -266,7 +266,7 @@ export default function Home() {
       </section>
 
       {/* --- Upload Section --- */}
-      <section ref={uploadSectionRef} className="w-full max-w-6xl mx-auto py-12 md:py-16 lg:py-20 px-4 md:px-6">
+      <section ref={uploadSectionRef} className="w-full max-w-6xl mx-auto pt-8 md:pt-12 lg:pt-16 pb-12 md:pb-16 lg:pb-20 px-4 md:px-6">
         <h2 className="text-3xl font-bold text-center mb-10 text-foreground">
           Upload Your Documents
         </h2>
