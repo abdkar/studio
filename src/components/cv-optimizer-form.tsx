@@ -196,7 +196,7 @@ export function CvOptimizerForm({
           toast({
               variant: "destructive",
               title: "Invalid File Type",
-              description: `Unsupported file type (${file.type || `.${extension}`}). Please use ${acceptedExtensions}.`,
+              description: `Unsupported file type (${file.type || `.${extension}`}). Please use ${acceptedExtensions.replace(/,/g, ', ')}.`,
               duration: 7000,
           });
           return; // Stop processing if both MIME and extension are invalid
@@ -213,15 +213,16 @@ export function CvOptimizerForm({
       readTextFile(file, isCv);
     } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
        const extractedText = await parsePdf(file, isCv);
-       // If parsing fails or returns null (no text), the file name might be cleared by parsePdf
-       // If it succeeds but returns empty string, the filename remains but text area is empty
        if (extractedText === null) {
-           // Parsing failed or had an issue, state handled within parsePdf
+           // Parsing failed, state handled within parsePdf, filename might be cleared
        } else if (extractedText === '') {
-            // PDF parsed, but no text found, state handled within parsePdf
+            // PDF parsed, no text found, state handled, filename remains, text area empty
        } else {
-           // Success with text, state handled within parsePdf
+           // Success with text, state handled
        }
+        if (!isCv && extractedText !== null) { // If JD was parsed (even if empty text)
+            setJdInputMethod('paste'); // Switch to paste tab to show/edit extracted text
+        }
 
     } else if (file.type === 'application/msword' || file.name.endsWith('.doc') ||
                file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
@@ -234,14 +235,13 @@ export function CvOptimizerForm({
         description: `Uploaded ${file.name}. Automatic text extraction for Word files isn't supported. Please copy the content and paste it into the text area.`,
         duration: 10000, // Longer duration for this message
       });
-      // No further automatic processing, filename remains set. User needs to paste.
        setIsProcessingInput(false); // Stop global processing indicator for Word files
-
+        if (!isCv) {
+            setJdInputMethod('paste'); // Switch to paste tab
+        }
     } else {
-       // This case might catch files with valid extensions but incorrect/generic MIME types that aren't handled above.
        console.warn(`[CvOptimizerForm] Unhandled valid file type combination for ${inputType}: ${file.name} (Type: ${file.type}). Prompting user.`);
        textSetter(''); // Clear text area
-       // Keep filename displayed
        toast({
         variant: "default",
         title: "File Uploaded",
@@ -249,47 +249,23 @@ export function CvOptimizerForm({
         duration: 9000,
       });
        setIsProcessingInput(false); // Stop global processing indicator
+        if (!isCv) {
+            setJdInputMethod('paste'); // Switch to paste tab
+        }
     }
   };
 
   // Specific change handlers for file inputs
   const handleCvFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     handleFileSelected(event.target.files?.[0] ?? null, true);
-    // Reset input value to allow selecting the same file again
     if (cvFileInputRef.current) cvFileInputRef.current.value = '';
   };
 
   const handleJdFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     handleFileSelected(event.target.files?.[0] ?? null, false);
-     if (jdFileInputRef.current) jdFileInputRef.current.value = ''; // Reset input
-     setJdInputMethod('upload'); // Switch tab on file selection
+     if (jdFileInputRef.current) jdFileInputRef.current.value = '';
+     // setJdInputMethod('upload'); // No need to force tab, handleFileSelected might switch to 'paste'
   };
-
-  // --- Drag and Drop Handlers ---
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, isCv: boolean) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (isCv) setIsCvDragging(true); else setIsJdDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>, isCv: boolean) => {
-    e.preventDefault();
-    e.stopPropagation();
-     if (isCv) setIsCvDragging(false); else setIsJdDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, isCv: boolean) => {
-    e.preventDefault();
-    e.stopPropagation();
-     if (isCv) setIsCvDragging(false); else setIsJdDragging(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileSelected(e.dataTransfer.files[0], isCv);
-      e.dataTransfer.clearData();
-       if (!isCv) setJdInputMethod('upload'); // Switch JD tab on drop
-    }
-  };
-
 
   // Function to clear CV input
    const clearCvInput = useCallback(() => {
@@ -299,7 +275,7 @@ export function CvOptimizerForm({
        cvFileInputRef.current.value = '';
      }
      toast({ title: "CV Input Cleared" });
-   }, [onCvTextChange, cvFileInputRef, toast]); // Removed setCvFileName dependency as it's implicitly handled
+   }, [onCvTextChange, toast]);
 
    // Function to clear Job Description input
    const clearJdInput = useCallback(() => {
@@ -308,58 +284,61 @@ export function CvOptimizerForm({
         if (jdFileInputRef.current) {
           jdFileInputRef.current.value = '';
        }
-       // Reset other JD inputs if needed (e.g., URL field)
+       setJdInputMethod('paste'); // Reset to paste tab
        toast({ title: "Job Description Input Cleared" });
-   }, [onJobDescTextChange, jdFileInputRef, toast]); // Removed setJdFileName dependency
+   }, [onJobDescTextChange, toast]);
 
-   // Determine if CV upload area should show loader or file info
-   const cvIsProcessing = isParsingCv || (isProcessingInput && !isParsingJd); // Show CV loader if parsing CV or if general processing isn't JD parsing
-   const jdIsProcessing = isParsingJd || (isProcessingInput && !isParsingCv); // Show JD loader if parsing JD or if general processing isn't CV parsing
+   const cvIsProcessing = isParsingCv;
+   const jdIsProcessing = isParsingJd;
 
 
   // --- Render ---
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       {/* --- Upload CV Card --- */}
-      <Card
-         className={`shadow-md transition-all ${isCvDragging ? 'border-primary ring-2 ring-primary' : ''}`}
-         onDragOver={(e) => handleDragOver(e, true)}
-         onDragLeave={(e) => handleDragLeave(e, true)}
-         onDrop={(e) => handleDrop(e, true)}
-      >
+      <Card className={`shadow-md transition-all ${isCvDragging ? 'border-primary ring-2 ring-primary' : ''}`}>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
             <CardTitle className="text-xl">Upload Your CV</CardTitle>
-            <CardDescription>TXT, PDF, DOC, DOCX - Drag & drop or click</CardDescription>
+            <CardDescription>TXT, PDF, DOC, DOCX - Drag &amp; drop or click</CardDescription>
           </div>
-           {/* Show clear button only if there's text OR a filename */}
            {(cvText || cvFileName) && (
-             <Button variant="ghost" size="icon" onClick={clearCvInput} aria-label="Clear CV Input" className="text-muted-foreground hover:text-destructive" disabled={cvIsProcessing}>
+             <Button variant="ghost" size="icon" onClick={clearCvInput} aria-label="Clear CV Input" className="text-muted-foreground hover:text-destructive" disabled={cvIsProcessing || isProcessingInput}>
                <Trash2 className="h-4 w-4" />
              </Button>
            )}
         </CardHeader>
         <CardContent>
           <div
-            className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted-foreground/30 rounded-lg h-48 cursor-pointer hover:border-primary transition-colors relative"
-            onClick={() => !cvIsProcessing && cvFileInputRef.current?.click()} // Prevent click during processing
-            aria-disabled={cvIsProcessing}
+            className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg h-48 hover:border-primary transition-colors relative ${cvIsProcessing || isProcessingInput ? 'cursor-not-allowed' : 'cursor-pointer'} ${isCvDragging ? 'border-primary ring-2 ring-primary' : 'border-muted-foreground/30'}`}
+            onClick={() => !(cvIsProcessing || isProcessingInput) && cvFileInputRef.current?.click()}
+            aria-disabled={cvIsProcessing || isProcessingInput}
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); if (!(cvIsProcessing || isProcessingInput)) setIsCvDragging(true);}}
+            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsCvDragging(false);}}
+            onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsCvDragging(false);
+                if (cvIsProcessing || isProcessingInput) return;
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    handleFileSelected(e.dataTransfer.files[0], true);
+                    e.dataTransfer.clearData();
+                }
+            }}
           >
-             {/* Loading Overlay */}
-              {cvIsProcessing && (
+              {(cvIsProcessing || (isProcessingInput && !jdIsProcessing)) && (
                   <div className="absolute inset-0 bg-background/70 flex flex-col items-center justify-center z-10 rounded-lg">
                       <Loader2 className="h-12 w-12 text-primary animate-spin mb-2" />
                       <p className="text-sm text-primary">Processing...</p>
                   </div>
               )}
-             {/* Content based on state (visible when not loading) */}
-              {!cvIsProcessing && cvFileName ? (
+              {!(cvIsProcessing || (isProcessingInput && !jdIsProcessing)) && cvFileName ? (
                   <>
                     <FileText className="h-12 w-12 text-primary mb-4" />
                     <p className="text-sm font-medium text-center text-foreground break-all px-2">{cvFileName}</p>
                     <p className="text-xs text-muted-foreground mt-1">Click or drag to replace</p>
                   </>
-              ) : !cvIsProcessing ? (
+              ) : !(cvIsProcessing || (isProcessingInput && !jdIsProcessing)) ? (
                   <>
                       <Upload className="h-12 w-12 text-muted-foreground mb-4" />
                       <p className="text-sm text-center text-muted-foreground">
@@ -367,8 +346,7 @@ export function CvOptimizerForm({
                       </p>
                        <p className="text-xs text-muted-foreground mt-1">(.txt, .pdf, .doc, .docx)</p>
                   </>
-              ) : null /* Loading state handled by overlay */}
-
+              ) : null}
             <Input
               ref={cvFileInputRef}
               id="cv-file-input"
@@ -376,45 +354,38 @@ export function CvOptimizerForm({
               accept={ACCEPTED_CV_TYPES}
               onChange={handleCvFileChange}
               className="hidden"
-              disabled={cvIsProcessing} // Disable input while processing
+              disabled={cvIsProcessing || isProcessingInput}
             />
           </div>
-
-          {/* Text Area for CV - Show if text exists, regardless of filename (allows editing after paste/upload) */}
            <Textarea
               placeholder={cvFileName ? "CV text extracted/loaded. Edit here if needed." : "Or paste your CV text here..."}
               className="mt-4 min-h-[100px] resize-y bg-white"
               value={cvText}
-              onChange={(e) => onCvTextChange(e.target.value)} // Allow editing pasted/loaded text
-              disabled={cvIsProcessing} // Disable textarea while processing
+              onChange={(e) => onCvTextChange(e.target.value)}
+              disabled={cvIsProcessing || isProcessingInput}
            />
         </CardContent>
       </Card>
 
       {/* --- Job Description Card --- */}
-       <Card
-         className={`shadow-md transition-all ${isJdDragging ? 'border-primary ring-2 ring-primary' : ''}`}
-         onDragOver={(e) => handleDragOver(e, false)}
-         onDragLeave={(e) => handleDragLeave(e, false)}
-         onDrop={(e) => handleDrop(e, false)}
-        >
+       <Card className={`shadow-md transition-all ${isJdDragging ? 'border-primary ring-2 ring-primary' : ''}`}>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
            <div>
              <CardTitle className="text-xl">Job Description</CardTitle>
-             <CardDescription>Paste text or upload a file</CardDescription>
+             <CardDescription>Provide the job description using one of the methods below</CardDescription>
            </div>
-           {(jobDescText || jdFileName) && ( // Show clear button if text or file exists
-               <Button variant="ghost" size="icon" onClick={clearJdInput} aria-label="Clear Job Description Input" className="text-muted-foreground hover:text-destructive" disabled={jdIsProcessing}>
+           {(jobDescText || jdFileName) && (
+               <Button variant="ghost" size="icon" onClick={clearJdInput} aria-label="Clear Job Description Input" className="text-muted-foreground hover:text-destructive" disabled={jdIsProcessing || isProcessingInput}>
                    <Trash2 className="h-4 w-4" />
                </Button>
             )}
         </CardHeader>
         <CardContent>
-          <Tabs value={jdInputMethod} onValueChange={(value) => setJdInputMethod(value as any)} className="w-full">
+          <Tabs value={jdInputMethod} onValueChange={(value) => setJdInputMethod(value as 'paste' | 'url' | 'upload')} className="w-full">
              <TabsList className="grid w-full grid-cols-3 mb-4">
-               <TabsTrigger value="paste" disabled={jdIsProcessing}>Paste Text</TabsTrigger>
-               <TabsTrigger value="url" disabled>Add URL</TabsTrigger> {/* Disabled for now */}
-               <TabsTrigger value="upload" disabled={jdIsProcessing}>Upload File</TabsTrigger>
+               <TabsTrigger value="paste" disabled={jdIsProcessing || isProcessingInput}>Paste Text</TabsTrigger>
+               <TabsTrigger value="url" disabled>Add URL</TabsTrigger>
+               <TabsTrigger value="upload" disabled={jdIsProcessing || isProcessingInput}>Upload File</TabsTrigger>
              </TabsList>
             <TabsContent value="paste">
               <Textarea
@@ -422,14 +393,13 @@ export function CvOptimizerForm({
                 className="min-h-[200px] resize-y bg-white"
                 value={jobDescText}
                 onChange={(e) => onJobDescTextChange(e.target.value)}
-                disabled={jdIsProcessing}
+                disabled={jdIsProcessing || isProcessingInput}
               />
               <p className="text-xs text-muted-foreground mt-2">
-                 The system will analyze this job description to identify relevant keywords.
+                 The system will analyze this job description to identify relevant keywords to enhance your CV without adding skills you don't possess.
               </p>
             </TabsContent>
             <TabsContent value="url">
-              {/* Placeholder for URL input - Currently disabled */}
               <Input type="url" placeholder="Enter job description URL (feature coming soon)" disabled />
                <p className="text-xs text-muted-foreground mt-2">
                   Pasting the URL will allow fetching the content (feature under development).
@@ -437,26 +407,36 @@ export function CvOptimizerForm({
             </TabsContent>
             <TabsContent value="upload">
                  <div
-                   className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted-foreground/30 rounded-lg h-48 cursor-pointer hover:border-primary transition-colors relative"
-                   onClick={() => !jdIsProcessing && jdFileInputRef.current?.click()}
-                   aria-disabled={jdIsProcessing}
+                   className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg h-48 hover:border-primary transition-colors relative ${jdIsProcessing || isProcessingInput ? 'cursor-not-allowed' : 'cursor-pointer'} ${isJdDragging ? 'border-primary ring-2 ring-primary' : 'border-muted-foreground/30'}`}
+                   onClick={() => !(jdIsProcessing || isProcessingInput) && jdFileInputRef.current?.click()}
+                   aria-disabled={jdIsProcessing || isProcessingInput}
+                   onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); if(!(jdIsProcessing || isProcessingInput)) setIsJdDragging(true);}}
+                   onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsJdDragging(false);}}
+                   onDrop={(e) => {
+                       e.preventDefault();
+                       e.stopPropagation();
+                       setIsJdDragging(false);
+                       if (jdIsProcessing || isProcessingInput) return;
+                       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                           handleFileSelected(e.dataTransfer.files[0], false);
+                           e.dataTransfer.clearData();
+                           // No need to setJdInputMethod here, handleFileSelected might switch to 'paste'
+                       }
+                   }}
                  >
-                     {/* Loading Overlay */}
-                      {jdIsProcessing && (
+                      {(jdIsProcessing || (isProcessingInput && !cvIsProcessing)) && (
                           <div className="absolute inset-0 bg-background/70 flex flex-col items-center justify-center z-10 rounded-lg">
                               <Loader2 className="h-12 w-12 text-primary animate-spin mb-2" />
                               <p className="text-sm text-primary">Processing...</p>
                           </div>
                       )}
-
-                    {/* Content based on state (visible when not loading) */}
-                      {!jdIsProcessing && jdFileName ? (
+                    {!(jdIsProcessing || (isProcessingInput && !cvIsProcessing)) && jdFileName ? (
                           <>
                             <FileText className="h-12 w-12 text-primary mb-4" />
                             <p className="text-sm font-medium text-center text-foreground break-all px-2">{jdFileName}</p>
                             <p className="text-xs text-muted-foreground mt-1">Click or drag to replace</p>
                           </>
-                      ) : !jdIsProcessing ? (
+                      ) : !(jdIsProcessing || (isProcessingInput && !cvIsProcessing)) ? (
                           <>
                               <Upload className="h-12 w-12 text-muted-foreground mb-4" />
                               <p className="text-sm text-center text-muted-foreground">
@@ -464,8 +444,7 @@ export function CvOptimizerForm({
                               </p>
                                <p className="text-xs text-muted-foreground mt-1">(.txt, .pdf, .doc, .docx)</p>
                           </>
-                      ) : null /* Loading state handled by overlay */}
-
+                      ) : null}
                    <Input
                      ref={jdFileInputRef}
                      id="jd-file-input"
@@ -473,22 +452,12 @@ export function CvOptimizerForm({
                      accept={ACCEPTED_JD_TYPES}
                      onChange={handleJdFileChange}
                      className="hidden"
-                     disabled={jdIsProcessing}
+                     disabled={jdIsProcessing || isProcessingInput}
                    />
                </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                   Upload TXT or PDF for automatic text extraction. For DOC/DOCX, please paste manually.
+                   Upload TXT or PDF for automatic text extraction. For DOC/DOCX, please copy and paste the content from the file into the 'Paste Text' tab.
                </p>
-                {/* Optional: Show JD text area if text exists */}
-                 {jobDescText && !jdFileName && (
-                     <Textarea
-                         placeholder="Job description text loaded/pasted..."
-                         className="mt-4 min-h-[100px] resize-y bg-white"
-                         value={jobDescText}
-                         onChange={(e) => onJobDescTextChange(e.target.value)}
-                         disabled={jdIsProcessing}
-                     />
-                 )}
             </TabsContent>
           </Tabs>
         </CardContent>
