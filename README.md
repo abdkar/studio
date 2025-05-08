@@ -19,12 +19,22 @@ Here are some screenshots to help you visualize the user experience of the app:
 
 Here is the screen to upload your CV and the job description:
 
-![Upload CV Screenshot](screenshots/app_2.png)
+![Upload CV Screenshot](screenshots/app_1.png)
 
 ### How it works
 
 Here's how the app will work:
-![How it works](screenshots/app_1.png)
+
+![How it works](screenshots/app_2.png)
+
+![How it works](screenshots/app_3.png)
+
+## Features
+
+- **CV Analysis:** Analyze the content and structure of your uploaded CV and get suggestions for improvement.
+- **Cover Letter Generation:** Create customized cover letters tailored to specific job descriptions.
+- **CV Generation:** Build visually appealing CVs by inputting your personal and professional information.
+  
 ## Key Capabilities
 
 Firebase Studio offers the following core functionalities:
@@ -84,22 +94,6 @@ To set up and use the CV and Cover Letter Wizard locally, follow these steps:
 
 ---
 
-#### **2. Update the "Screenshots" Section**
-You already have a "Screenshots" section, but you can make it more engaging by briefly explaining each screenshot.
 
-```markdown
-## Screenshots
 
-### Upload CV and Job Description
-This screen allows users to upload their CV and job description for analysis:
-![Upload CV Screenshot](screenshots/app_2.png)
 
-### How It Works
-A visual guide to the workflow of the application:
-![How it works](screenshots/app_1.png)
-
-## Features
-
-- **CV Analysis:** Analyze the content and structure of your uploaded CV and get suggestions for improvement.
-- **Cover Letter Generation:** Create customized cover letters tailored to specific job descriptions.
-- **CV Generation:** Build visually appealing CVs by inputting your personal and professional information.
