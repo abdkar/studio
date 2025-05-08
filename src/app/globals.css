@@ -2,91 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
 @layer base {
   :root {
-    /* Light mode - Matching the image */
-    /* Background: Very light blue/gray (similar to #F8F9FA or slightly bluer) */
-    --background: 210 17% 98%; /* hsl(210, 17%, 98%) - Very light blue-gray */
-    /* Foreground: Dark grayish blue (similar to #495057) */
-    --foreground: 210 14% 34%; /* hsl(210, 14%, 34%) */
-    --card: 0 0% 100%; /* White cards */
-    --card-foreground: 210 14% 34%; /* Match foreground */
-    --popover: 0 0% 100%; /* White popovers */
-    --popover-foreground: 210 14% 34%; /* Match foreground */
-    /* Primary: Blue button color (similar to #0d6efd) */
-    --primary: 217 91% 60%; /* hsl(217, 91%, 60%) */
-    --primary-foreground: 0 0% 98%; /* White text on blue button */
-    /* Secondary: Lighter gray for secondary elements/borders */
-    --secondary: 210 16% 93%; /* hsl(210, 16%, 93%) - Light gray */
-    --secondary-foreground: 210 14% 34%; /* Match foreground */
-    --muted: 210 16% 93%; /* Use secondary for muted */
-    --muted-foreground: 210 10% 60%; /* Slightly darker muted text */
-    /* Accent: Can use primary blue or a slightly lighter variant */
-    --accent: 217 91% 60%; /* Match primary */
-    --accent-foreground: 0 0% 98%; /* White text on accent */
+    /* Light mode - Neutral Professional */
+    --background: 0 0% 100%; /* White */
+    --foreground: 224 71% 4%; /* Almost Black */
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 224 71% 4%; /* Almost Black */
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 224 71% 4%; /* Almost Black */
+    --primary: 217 91% 60%; /* Bright Blue */
+    --primary-foreground: 0 0% 98%; /* White */
+    --secondary: 215 28% 96%; /* Very Light Gray/Blue */
+    --secondary-foreground: 224 71% 10%; /* Dark Blue */
+    --muted: 215 28% 96%; /* Very Light Gray/Blue */
+    --muted-foreground: 215 20% 65%; /* Medium Gray */
+    --accent: 180 70% 45%; /* Vibrant Teal */
+    --accent-foreground: 0 0% 98%; /* White */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 210 16% 88%; /* Slightly darker border */
-    --input: 210 16% 88%; /* Match border for input */
-    --ring: 217 91% 60%; /* Blue for focus rings */
-    --chart-1: 217 91% 60%; /* Blue */
-    --chart-2: 217 70% 70%; /* Lighter Blue */
-    --chart-3: 210 14% 60%; /* Mid Gray-Blue */
-    --chart-4: 210 16% 80%; /* Lighter Gray-Blue */
-    --chart-5: 210 14% 40%; /* Darker Gray-Blue */
+    --border: 215 20% 90%; /* Light Gray Border */
+    --input: 215 20% 90%; /* Light Gray Input */
+    --ring: 217 91% 60%; /* Bright Blue Ring */
     --radius: 0.5rem;
-    /* Keeping sidebar vars as they are, adjust if sidebar is added */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --chart-1: hsl(var(--primary));
+    --chart-2: hsl(var(--accent));
+    --chart-3: 180 60% 75%; /* Lighter Teal */
+    --chart-4: 217 70% 80%; /* Lighter Blue */
+    --chart-5: 220 30% 60%; /* Mid Gray-Blue */
+
+    /* Light Mode Sidebar */
+    --sidebar-background: 215 30% 97%; /* Very light, slightly off-white/blue */
+    --sidebar-foreground: 224 71% 8%; /* Dark */
+    --sidebar-primary: hsl(var(--primary));
+    --sidebar-primary-foreground: hsl(var(--primary-foreground));
+    --sidebar-accent: 215 60% 90%; /* Very light blue for accent backgrounds */
+    --sidebar-accent-foreground: 224 71% 10%; /* Dark text on light accent */
+    --sidebar-border: 215 20% 88%;
+    --sidebar-ring: hsl(var(--ring));
   }
 
   .dark {
-    /* Dark mode - Provide a basic dark theme fallback */
-    --background: 210 10% 10%; /* Dark blue-gray background */
-    --foreground: 210 10% 85%; /* Light foreground */
-    --card: 210 10% 15%; /* Slightly lighter dark card */
-    --card-foreground: 210 10% 85%; /* Match foreground */
-    --popover: 210 10% 15%; /* Match card */
-    --popover-foreground: 210 10% 85%; /* Match foreground */
-    /* Primary: Adjust blue for dark mode */
-    --primary: 217 80% 65%;
-    --primary-foreground: 210 10% 10%; /* Dark text on primary */
-    --secondary: 210 10% 25%; /* Darker secondary */
-    --secondary-foreground: 210 10% 85%; /* Match foreground */
-    --muted: 210 10% 25%; /* Match secondary */
-    --muted-foreground: 210 10% 60%; /* Lighter muted text */
-    --accent: 217 80% 65%; /* Match primary */
-    --accent-foreground: 210 10% 10%; /* Dark text on accent */
-    --destructive: 0 70% 55%; /* Adjust destructive */
+    /* Dark mode - Inspired by JetBrains Screenshot */
+    --background: 205 65% 12%; /* Deep Dark Blue */
+    --foreground: 210 30% 96%; /* Off-White/Very Light Gray */
+    --card: 205 60% 16%; /* Slightly Lighter Deep Dark Blue */
+    --card-foreground: 210 30% 96%;
+    --popover: 205 60% 18%; /* Slightly lighter than card for pop-up effect */
+    --popover-foreground: 210 30% 96%;
+    --primary: 217 91% 60%; /* Bright Blue */
+    --primary-foreground: 0 0% 98%; /* White */
+    --secondary: 205 50% 28%; /* Muted Mid-Blue */
+    --secondary-foreground: 210 25% 88%; /* Light Gray */
+    --muted: 205 50% 22%; /* Darker Muted Blue */
+    --muted-foreground: 210 25% 70%; /* Softer Gray */
+    --accent: 180 70% 45%; /* Vibrant Teal */
+    --accent-foreground: 0 0% 98%; /* White */
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 210 10% 30%; /* Darker border */
-    --input: 210 10% 30%; /* Match border */
-    --ring: 217 80% 65%; /* Blue ring */
-    --chart-1: 217 80% 65%; /* Blue */
-    --chart-2: 217 70% 75%; /* Lighter Blue */
-    --chart-3: 210 10% 70%; /* Lighter Gray-Blue */
-    --chart-4: 210 10% 50%; /* Mid Gray-Blue */
-    --chart-5: 210 10% 80%; /* Very Light Gray-Blue */
+    --border: 205 55% 20%; /* Subtle Border */
+    --input: 205 55% 20%; /* Input matches border */
+    --ring: 217 91% 60%; /* Bright Blue Ring */
     --radius: 0.5rem;
-    /* Keeping sidebar vars, adjust if needed */
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --chart-1: hsl(var(--primary));
+    --chart-2: hsl(var(--accent));
+    --chart-3: 180 60% 65%; /* Lighter Teal */
+    --chart-4: 217 70% 75%; /* Lighter Blue */
+    --chart-5: 210 20% 80%; /* Light Gray */
+    
+    /* Dark Mode Sidebar */
+    --sidebar-background: 205 62% 14%; /* Distinct dark blue for sidebar */
+    --sidebar-foreground: 210 30% 92%; /* Light text for sidebar */
+    --sidebar-primary: hsl(var(--primary));
+    --sidebar-primary-foreground: hsl(var(--primary-foreground));
+    --sidebar-accent: hsl(var(--accent)); /* Teal for sidebar accents */
+    --sidebar-accent-foreground: hsl(var(--accent-foreground)); /* White text */
+    --sidebar-border: 205 55% 18%;
+    --sidebar-ring: hsl(var(--ring));
   }
 }
 
@@ -96,5 +90,6 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    /* font-family removed to allow Tailwind's font-sans (Inter) to take full effect */
   }
 }
