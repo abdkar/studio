@@ -11,6 +11,20 @@ This application is tailored for:
 *   **Job Seekers:** Individuals actively looking for new job opportunities who need to create or improve their CV and cover letter.
 *   **Professionals:** Those who wish to update or improve their CV and cover letter.
 
+## Screenshots
+
+Here are some screenshots to help you visualize the user experience of the app:
+
+### Upload CV and job description
+
+Here is the screen to upload your CV and the job description:
+
+![Upload Documents](https://i.imgur.com/screenshot1.png)
+
+### How it works
+
+Here's how the app will work:
+![How it works](https://i.imgur.com/screenshot2.png)
 ## Key Capabilities
 
 Firebase Studio offers the following core functionalities:
