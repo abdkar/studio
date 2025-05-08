@@ -68,21 +68,38 @@ CV and Cover Letter Wizard is built on the following technologies:
 
 ## Installation
 
-To get started with CV and Cover Letter Wizard, follow these steps:
+## Getting Started
 
-1.  **Clone the Repository:**
+To set up and use the CV and Cover Letter Wizard locally, follow these steps:
+
+### Prerequisites
+1. Install [Node.js](https://nodejs.org/) (version 14 or higher).
+2. Install a package manager like `npm` or `yarn`.
+
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/abdkar/studio.git
 
 
-The application's style guide is detailed in the [docs/blueprint.md](docs/blueprint.md) file. This document outlines the preferred design patterns, typography, color schemes, and UI element usage.
+---
 
-## Next Steps
+#### **2. Update the "Screenshots" Section**
+You already have a "Screenshots" section, but you can make it more engaging by briefly explaining each screenshot.
 
-The next steps are:
+```markdown
+## Screenshots
 
-1.  **UI/UX Refinement:**
-    *   Enhance the user interface based on the style guide in `docs/blueprint.md`.
-    *   Ensure the application is intuitive and visually appealing.
-2.  **Firebase Integration:**
-3. **CV and Cover letter logic**
-    * Implement the main logic for the app.
+### Upload CV and Job Description
+This screen allows users to upload their CV and job description for analysis:
+![Upload CV Screenshot](screenshots/app_2.png)
 
+### How It Works
+A visual guide to the workflow of the application:
+![How it works](screenshots/app_1.png)
+
+## Features
+
+- **CV Analysis:** Analyze the content and structure of your uploaded CV and get suggestions for improvement.
+- **Cover Letter Generation:** Create customized cover letters tailored to specific job descriptions.
+- **CV Generation:** Build visually appealing CVs by inputting your personal and professional information.
