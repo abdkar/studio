@@ -4,19 +4,30 @@
 import React from 'react';
 import type { EvaluateCoverLetterOutput } from '@/ai/flows/evaluate-cover-letter-flow';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, CheckSquare, BarChart, MessageSquare, ClipboardCheck, Info } from 'lucide-react'; // Added relevant icons
+import { AlertCircle, CheckSquare, BarChart, MessageSquare, ClipboardCheck, Info, RefreshCw, Loader2 } from 'lucide-react';
 
 type CoverLetterEvaluationResultsProps = {
   result: EvaluateCoverLetterOutput | null;
   isLoading: boolean;
   error: string | null;
+  onRegenerate: () => Promise<void>;
+  originalCoverLetterText: string | null;
+  isRegenerating: boolean;
 };
 
-export function CoverLetterEvaluationResults({ result, isLoading, error }: CoverLetterEvaluationResultsProps) {
-  if (isLoading) {
+export function CoverLetterEvaluationResults({
+  result,
+  isLoading,
+  error,
+  onRegenerate,
+  originalCoverLetterText,
+  isRegenerating
+}: CoverLetterEvaluationResultsProps) {
+  if (isLoading && !isRegenerating) { // Show skeleton only if initial evaluation is loading
     return (
       <Card className="shadow-md animate-pulse">
         <CardHeader>
@@ -24,7 +35,6 @@ export function CoverLetterEvaluationResults({ result, isLoading, error }: Cover
           <Skeleton className="h-4 w-1/2" />
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Score Skeleton */}
           <div>
             <Skeleton className="h-6 w-1/3 mb-2" />
             <div className="flex items-center gap-4">
@@ -33,7 +43,6 @@ export function CoverLetterEvaluationResults({ result, isLoading, error }: Cover
             </div>
             <Skeleton className="h-4 w-4/5 mt-2" />
           </div>
-          {/* Feedback Skeletons */}
           {[...Array(5)].map((_, i) => (
             <div key={i} className="space-y-2">
               <Skeleton className="h-5 w-1/4 mb-1" />
@@ -56,7 +65,6 @@ export function CoverLetterEvaluationResults({ result, isLoading, error }: Cover
     );
   }
 
-  // Only render the card if there is a result
   if (!result) {
     return null;
   }
@@ -81,7 +89,6 @@ export function CoverLetterEvaluationResults({ result, isLoading, error }: Cover
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Relevance Score */}
         <div className="space-y-2">
           <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
              <BarChart className="text-primary" /> Relevance Score
@@ -95,7 +102,6 @@ export function CoverLetterEvaluationResults({ result, isLoading, error }: Cover
           </p>
         </div>
 
-        {/* Detailed Feedback Sections */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FeedbackItem icon={MessageSquare} title="Tone Analysis" content={toneAnalysis} />
           <FeedbackItem icon={ClipboardCheck} title="Keyword Usage" content={keywordUsage} />
@@ -103,19 +109,36 @@ export function CoverLetterEvaluationResults({ result, isLoading, error }: Cover
           <FeedbackItem icon={ClipboardCheck} title="ATS Friendliness" content={atsFriendliness} />
         </div>
 
-        {/* Overall Feedback */}
         <div className="space-y-2 pt-4 border-t">
            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <Info className="text-primary" /> Overall Feedback & Suggestions
            </h3>
            <p className="text-sm text-foreground whitespace-pre-wrap">{overallFeedback}</p>
         </div>
+
+        {overallFeedback && originalCoverLetterText && (
+          <div className="mt-6 text-center">
+            <Button
+              onClick={onRegenerate}
+              disabled={isRegenerating || isLoading}
+            >
+              {isRegenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Regenerating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" /> Regenerate with Suggestions
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-// Helper component for consistent feedback item display
 type FeedbackItemProps = {
     icon: React.ElementType;
     title: string;

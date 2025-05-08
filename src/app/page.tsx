@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef } from 'react';
@@ -9,13 +10,13 @@ import { GeneratedCoverLetterDisplay } from '@/components/generated-cover-letter
 import { CoverLetterEvaluationResults } from '@/components/cover-letter-evaluation-results';
 import type { AnalyzeCvOutput } from '@/ai/flows/cv-analyzer';
 import { analyzeCv } from '@/ai/flows/cv-analyzer';
-import { createCv, type CreateCvOutput, type CreateCvInput as CreateCvGenInput } from '@/ai/flows/create-cv-flow'; // Renamed import type to avoid conflict
+import { createCv, type CreateCvOutput, type CreateCvInput as CreateCvGenInput } from '@/ai/flows/create-cv-flow';
 import { createCoverLetter, type CreateCoverLetterOutput, type CreateCoverLetterInput } from '@/ai/flows/create-cover-letter-flow';
 import { evaluateCoverLetter, type EvaluateCoverLetterOutput } from '@/ai/flows/evaluate-cover-letter-flow';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, FileCheck2, Mail } from 'lucide-react';
+import { Loader2, FileCheck2, Mail, RefreshCw } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -39,6 +40,8 @@ export default function Home() {
   const [generatedCoverLetter, setGeneratedCoverLetter] = useState<string | null>(null);
   const [isCreatingCoverLetter, setIsCreatingCoverLetter] = useState(false);
   const [coverLetterError, setCoverLetterError] = useState<string | null>(null);
+  const [isRegeneratingCoverLetter, setIsRegeneratingCoverLetter] = useState(false);
+
 
   const [coverLetterEvaluation, setCoverLetterEvaluation] = useState<EvaluateCoverLetterOutput | null>(null);
   const [isEvaluatingCoverLetter, setIsEvaluatingCoverLetter] = useState(false);
@@ -63,6 +66,7 @@ export default function Home() {
     setIsCreatingCv(false);
     setIsCreatingCoverLetter(false);
     setIsEvaluatingCoverLetter(false);
+    setIsRegeneratingCoverLetter(false);
   };
 
   // --- Handlers ---
@@ -111,7 +115,7 @@ export default function Home() {
 
 
   const handleCreateTailoredCv = async () => {
-      if (!analysisResult && (!cvText || !jobDescText)) { // Allow CV creation even without prior analysis if texts are present
+      if (!analysisResult && (!cvText || !jobDescText)) { 
            toast({ variant: "destructive", title: "Input Missing", description: "Please provide CV and Job Description text, or analyze first." });
            return;
       }
@@ -125,9 +129,9 @@ export default function Home() {
        }
 
 
-      setGeneratedCvMarkdown(null); // Clear previous CV
+      setGeneratedCvMarkdown(null); 
       setCreationError(null);
-      setGeneratedCoverLetter(null); // Clear other results too
+      setGeneratedCoverLetter(null); 
       setCoverLetterError(null);
       setCoverLetterEvaluation(null);
       setEvaluationError(null);
@@ -137,10 +141,10 @@ export default function Home() {
 
       try {
           console.log('[Home] Submitting for CV creation...');
-          const creationInput: CreateCvGenInput = { // Use the renamed type here
+          const creationInput: CreateCvGenInput = { 
               cvText,
               jobDescriptionText: jobDescText,
-              analysisResults: analysisResult, // Pass analysisResult, can be null
+              analysisResults: analysisResult, 
           };
           const result: CreateCvOutput = await createCv(creationInput);
           console.log('[Home] CV creation result received.');
@@ -177,16 +181,16 @@ export default function Home() {
             return;
         }
 
-       setGeneratedCoverLetter(null); // Clear previous
+       setGeneratedCoverLetter(null); 
        setCoverLetterError(null);
        setCoverLetterEvaluation(null);
        setEvaluationError(null);
-       setGeneratedCvMarkdown(null); // Clear other results
+       setGeneratedCvMarkdown(null); 
        setCreationError(null);
 
 
        setIsCreatingCoverLetter(true);
-       setIsEvaluatingCoverLetter(true);
+       setIsEvaluatingCoverLetter(true); 
        setIsProcessingInput(true);
 
        let generatedText: string | null = null;
@@ -225,7 +229,7 @@ export default function Home() {
            console.error('[Home] Error during Cover Letter Process:', error);
            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
 
-           if (!generatedText) {
+           if (!generatedText) { // Error during generation
                setGeneratedCoverLetter(null);
                setCoverLetterError(`Cover Letter generation failed: ${errorMessage}`);
                setCoverLetterEvaluation(null);
@@ -236,7 +240,7 @@ export default function Home() {
                    description: `An error occurred: ${errorMessage}. Please try again.`,
                    duration: 9000,
                });
-           } else {
+           } else { // Error during evaluation
                setCoverLetterEvaluation(null);
                setEvaluationError(`Evaluation failed: ${errorMessage}`);
                 toast({
@@ -253,6 +257,67 @@ export default function Home() {
        }
    };
 
+   const handleRegenerateCoverLetter = async () => {
+    if (!cvText || !jobDescText || !generatedCoverLetter || !coverLetterEvaluation?.overallFeedback) {
+        toast({ variant: "destructive", title: "Missing Information", description: "Cannot regenerate without CV, job description, original letter, and feedback." });
+        return;
+    }
+
+    setIsRegeneratingCoverLetter(true);
+    setIsProcessingInput(true);
+    setCoverLetterError(null);
+    // Reset evaluation for the *previous* letter, as we are generating a new one
+    setCoverLetterEvaluation(null); 
+    setEvaluationError(null);
+
+
+    try {
+        console.log('[Home] Submitting for Cover Letter regeneration with feedback...');
+        const regenerationInput: CreateCoverLetterInput = {
+            cvText,
+            jobDescriptionText: jobDescText,
+            analysisResults: analysisResult, // Pass along existing analysis if available
+            originalCoverLetterText: generatedCoverLetter,
+            evaluationFeedback: coverLetterEvaluation.overallFeedback,
+        };
+        const result: CreateCoverLetterOutput = await createCoverLetter(regenerationInput);
+        console.log('[Home] Cover Letter regeneration result received.');
+        setGeneratedCoverLetter(result.generatedCoverLetterText); // Update the displayed cover letter
+        setCoverLetterError(null);
+        toast({
+            title: "Cover Letter Regenerated",
+            description: "The cover letter has been updated based on the feedback.",
+        });
+
+        // Optionally, trigger a new evaluation for the regenerated letter
+        // For now, we just clear the old evaluation. If re-evaluation is desired:
+        // console.log('[Home] Submitting regenerated Cover Letter for evaluation...');
+        // setIsEvaluatingCoverLetter(true);
+        // const evaluationInput = { generatedCoverLetterText: result.generatedCoverLetterText, jobDescriptionText: jobDescText };
+        // const newEvaluationResult = await evaluateCoverLetter(evaluationInput);
+        // setCoverLetterEvaluation(newEvaluationResult);
+        // setEvaluationError(null);
+        // toast({ title: "Regenerated Letter Evaluated", description: "Evaluation of the new letter finished." });
+
+
+    } catch (error) {
+        console.error('[Home] Error during Cover Letter Regeneration:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        setCoverLetterError(`Cover Letter regeneration failed: ${errorMessage}`);
+        toast({
+            variant: "destructive",
+            title: "Regeneration Error",
+            description: `An error occurred: ${errorMessage}. Please try again.`,
+            duration: 9000,
+        });
+    } finally {
+        setIsRegeneratingCoverLetter(false);
+        setIsProcessingInput(false);
+        // setIsEvaluatingCoverLetter(false); // If re-evaluating
+    }
+};
+
+
   const scrollToUpload = () => {
     uploadSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -260,7 +325,7 @@ export default function Home() {
   const shouldShowAnyResult =
     analysisResult || isAnalyzing || analysisError ||
     generatedCvMarkdown || isCreatingCv || creationError ||
-    generatedCoverLetter || isCreatingCoverLetter || coverLetterError ||
+    generatedCoverLetter || isCreatingCoverLetter || coverLetterError || isRegeneratingCoverLetter ||
     coverLetterEvaluation || isEvaluatingCoverLetter || evaluationError;
 
   return (
@@ -279,7 +344,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section ref={uploadSectionRef} className="w-full max-w-6xl mx-auto pt-8 md:pt-12 lg:pt-16 pb-12 md:pb-16 lg:pb-20 px-4 md:px-6">
+      <section ref={uploadSectionRef} className="w-full max-w-6xl mx-auto pt-8 md:pt-12 lg:pt-16 pb-12 md:pb-16 px-4 md:px-6"> {/* Reduced bottom padding */}
         <h2 className="text-3xl font-bold text-center mb-10 text-foreground">
           Upload Your Documents
         </h2>
@@ -338,7 +403,7 @@ export default function Home() {
                   isLoading={isAnalyzing}
                   error={analysisError}
                 />
-                 {(analysisResult || (cvText && jobDescText)) && !analysisError && !isAnalyzing && ( // Allow actions if analysis exists OR if base texts exist
+                 {(analysisResult || (cvText && jobDescText)) && !analysisError && !isAnalyzing && ( 
                     <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
                        <Button
                             onClick={handleCreateTailoredCv}
@@ -353,12 +418,12 @@ export default function Home() {
                         </Button>
                         <Button
                             onClick={handleCreateCoverLetter}
-                            disabled={isProcessingInput || isCreatingCoverLetter || isEvaluatingCoverLetter || !analysisResult} // Cover letter requires analysis
+                            disabled={isProcessingInput || isCreatingCoverLetter || isEvaluatingCoverLetter || !analysisResult} 
                             className="bg-secondary hover:bg-secondary/90 text-secondary-foreground"
                         >
                              {isCreatingCoverLetter ? (
                                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating Letter...</>
-                             ) : isEvaluatingCoverLetter ? (
+                             ) : isEvaluatingCoverLetter ? ( // This state is used during the initial creation + evaluation phase
                                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Evaluating Letter...</>
                              ) : (
                                 <><Mail className="mr-2 h-4 w-4" /> Create Cover Letter</>
@@ -378,10 +443,10 @@ export default function Home() {
              />
           )}
 
-           {(generatedCoverLetter || isCreatingCoverLetter || coverLetterError) && (
+           {(generatedCoverLetter || isCreatingCoverLetter || coverLetterError || isRegeneratingCoverLetter) && (
              <GeneratedCoverLetterDisplay
               coverLetterText={generatedCoverLetter}
-              isLoading={isCreatingCoverLetter}
+              isLoading={isCreatingCoverLetter || isRegeneratingCoverLetter}
               error={coverLetterError}
              />
            )}
@@ -391,6 +456,9 @@ export default function Home() {
                 result={coverLetterEvaluation}
                 isLoading={isEvaluatingCoverLetter}
                 error={evaluationError}
+                onRegenerate={handleRegenerateCoverLetter}
+                originalCoverLetterText={generatedCoverLetter}
+                isRegenerating={isRegeneratingCoverLetter}
               />
             )}
         </section>
@@ -399,4 +467,3 @@ export default function Home() {
     </main>
   );
 }
-
