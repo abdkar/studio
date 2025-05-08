@@ -1,6 +1,15 @@
-# Firebase Studio
+# CV and Cover Letter Wizard
 
-Firebase Studio is a Next.js application designed to streamline and enhance the job application process. It leverages powerful features to analyze CVs, generate cover letters, and craft new CVs, all within a user-friendly interface.
+## Introduction
+
+CV and Cover Letter Wizard is a cutting-edge web application designed to help job seekers with their CVs and cover letters. Built with Next.js, it empowers users to effortlessly create, refine, and personalize their CVs and cover letters. This tool leverages advanced AI and natural language processing (NLP) to analyze CVs, generate tailored cover letters, and structure new CVs, all within a seamless and intuitive interface.
+
+**Target Audience:**
+
+This application is tailored for:
+
+*   **Job Seekers:** Individuals actively looking for new job opportunities who need to create or improve their CV and cover letter.
+*   **Professionals:** Those who wish to update or improve their CV and cover letter.
 
 ## Key Capabilities
 
@@ -23,7 +32,7 @@ Firebase Studio offers the following core functionalities:
 
 ## Technologies
 
-Firebase Studio is built on the following technologies:
+CV and Cover Letter Wizard is built on the following technologies:
 
 *   **Next.js:** A React framework for building server-rendered and static web applications.
 *   **TypeScript:** A typed superset of JavaScript that enhances code quality and maintainability.
@@ -43,6 +52,13 @@ Firebase Studio is built on the following technologies:
 
 ## Style Guidelines
 
+## Installation
+
+To get started with CV and Cover Letter Wizard, follow these steps:
+
+1.  **Clone the Repository:**
+
+
 The application's style guide is detailed in the [docs/blueprint.md](docs/blueprint.md) file. This document outlines the preferred design patterns, typography, color schemes, and UI element usage.
 
 ## Next Steps
@@ -53,6 +69,6 @@ The next steps are:
     *   Enhance the user interface based on the style guide in `docs/blueprint.md`.
     *   Ensure the application is intuitive and visually appealing.
 2.  **Firebase Integration:**
-    *   Connect the application to Firebase services for data storage and authentication.
-3. **CV and cover letter logic**
+3. **CV and Cover letter logic**
     * Implement the main logic for the app.
+
