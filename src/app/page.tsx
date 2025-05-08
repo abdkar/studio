@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef } from 'react';
@@ -9,11 +8,11 @@ import { GeneratedCvDisplay } from '@/components/generated-cv-display';
 import { GeneratedCoverLetterDisplay } from '@/components/generated-cover-letter-display';
 import { CoverLetterEvaluationResults } from '@/components/cover-letter-evaluation-results';
 import type { AnalyzeCvOutput } from '@/ai/flows/cv-analyzer';
-import { analyzeCv } from '@/ai/flows/cv-analyzer'; // Import analysis flow separately
-import { createCv, type CreateCvOutput } from '@/ai/flows/create-cv-flow';
+import { analyzeCv } from '@/ai/flows/cv-analyzer';
+import { createCv, type CreateCvOutput, type CreateCvInput as CreateCvGenInput } from '@/ai/flows/create-cv-flow'; // Renamed import type to avoid conflict
 import { createCoverLetter, type CreateCoverLetterOutput, type CreateCoverLetterInput } from '@/ai/flows/create-cover-letter-flow';
 import { evaluateCoverLetter, type EvaluateCoverLetterOutput } from '@/ai/flows/evaluate-cover-letter-flow';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; // Assuming CardTitle, CardDescription exist
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, FileCheck2, Mail } from 'lucide-react';
@@ -27,7 +26,7 @@ export default function Home() {
   // --- State Variables ---
   const [cvText, setCvText] = useState<string>('');
   const [jobDescText, setJobDescText] = useState<string>('');
-  const [jobTitle, setJobTitle] = useState<string>(''); // New state for job title
+  const [jobTitle, setJobTitle] = useState<string>('');
 
   const [analysisResult, setAnalysisResult] = useState<AnalyzeCvOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -45,7 +44,7 @@ export default function Home() {
   const [isEvaluatingCoverLetter, setIsEvaluatingCoverLetter] = useState(false);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
 
-  const [isProcessingInput, setIsProcessingInput] = useState(false); // Combined loading state for form inputs
+  const [isProcessingInput, setIsProcessingInput] = useState(false);
 
   const { toast } = useToast();
 
@@ -68,7 +67,6 @@ export default function Home() {
 
   // --- Handlers ---
 
-  // Handler for the main "Analyze Documents" button
   const handleAnalyzeDocuments = async () => {
     if (!cvText || cvText.trim().length < 50) {
        toast({ variant: "destructive", title: "CV Missing", description: "Please provide CV text or upload a valid CV file." });
@@ -79,7 +77,7 @@ export default function Home() {
        return;
     }
 
-    clearAllResults(); // Clear previous results
+    clearAllResults();
     setIsAnalyzing(true);
     setIsProcessingInput(true);
 
@@ -112,24 +110,38 @@ export default function Home() {
   };
 
 
-  // Handler for "Create Tailored CV" button (now separate in the results section)
   const handleCreateTailoredCv = async () => {
-      if (!analysisResult) {
-         toast({ variant: "destructive", title: "Analysis Required", description: "Please analyze the documents first before generating a CV." });
-         return;
+      if (!analysisResult && (!cvText || !jobDescText)) { // Allow CV creation even without prior analysis if texts are present
+           toast({ variant: "destructive", title: "Input Missing", description: "Please provide CV and Job Description text, or analyze first." });
+           return;
       }
-       if (!cvText || !jobDescText) {
-           toast({ variant: "destructive", title: "Input Missing", description: "CV and Job Description text are required." });
-           return; // Should not happen if analysisResult exists, but safety check
+       if (!cvText || cvText.trim().length < 50) {
+           toast({ variant: "destructive", title: "CV Missing", description: "CV text is required to generate a tailored CV." });
+           return;
+       }
+       if (!jobDescText || jobDescText.trim().length < 50) {
+            toast({ variant: "destructive", title: "Job Description Missing", description: "Job description text is required to generate a tailored CV." });
+            return;
        }
 
-      clearAllResults(false); // Keep analysis result
+
+      setGeneratedCvMarkdown(null); // Clear previous CV
+      setCreationError(null);
+      setGeneratedCoverLetter(null); // Clear other results too
+      setCoverLetterError(null);
+      setCoverLetterEvaluation(null);
+      setEvaluationError(null);
+
       setIsCreatingCv(true);
       setIsProcessingInput(true);
 
       try {
           console.log('[Home] Submitting for CV creation...');
-          const creationInput = { cvText, jobDescriptionText: jobDescText };
+          const creationInput: CreateCvGenInput = { // Use the renamed type here
+              cvText,
+              jobDescriptionText: jobDescText,
+              analysisResults: analysisResult, // Pass analysisResult, can be null
+          };
           const result: CreateCvOutput = await createCv(creationInput);
           console.log('[Home] CV creation result received.');
           setGeneratedCvMarkdown(result.generatedCvMarkdown);
@@ -155,7 +167,6 @@ export default function Home() {
       }
   };
 
-  // Handler for "Create Cover Letter" button (now separate in the results section)
    const handleCreateCoverLetter = async () => {
        if (!analysisResult) {
           toast({ variant: "destructive", title: "Analysis Required", description: "Please analyze the documents first before generating a cover letter." });
@@ -163,12 +174,19 @@ export default function Home() {
        }
         if (!cvText || !jobDescText) {
             toast({ variant: "destructive", title: "Input Missing", description: "CV and Job Description text are required." });
-            return; // Safety check
+            return;
         }
 
-       clearAllResults(false); // Keep analysis result
+       setGeneratedCoverLetter(null); // Clear previous
+       setCoverLetterError(null);
+       setCoverLetterEvaluation(null);
+       setEvaluationError(null);
+       setGeneratedCvMarkdown(null); // Clear other results
+       setCreationError(null);
+
+
        setIsCreatingCoverLetter(true);
-       setIsEvaluatingCoverLetter(true); // Start evaluation spinner immediately
+       setIsEvaluatingCoverLetter(true);
        setIsProcessingInput(true);
 
        let generatedText: string | null = null;
@@ -178,7 +196,7 @@ export default function Home() {
            const coverLetterInput: CreateCoverLetterInput = {
                cvText,
                jobDescriptionText: jobDescText,
-               analysisResults: analysisResult, // Pass the existing analysis result
+               analysisResults: analysisResult,
            };
            const result: CreateCoverLetterOutput = await createCoverLetter(coverLetterInput);
            console.log('[Home] Cover Letter creation result received.');
@@ -190,7 +208,6 @@ export default function Home() {
                description: "Now evaluating the generated cover letter...",
            });
 
-           // --- Trigger Evaluation ---
            console.log('[Home] Submitting for Cover Letter evaluation...');
             const evaluationInput = {
                 generatedCoverLetterText: generatedText,
@@ -208,10 +225,10 @@ export default function Home() {
            console.error('[Home] Error during Cover Letter Process:', error);
            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
 
-           if (!generatedText) { // Error during generation
+           if (!generatedText) {
                setGeneratedCoverLetter(null);
                setCoverLetterError(`Cover Letter generation failed: ${errorMessage}`);
-               setCoverLetterEvaluation(null); // Ensure evaluation is cleared
+               setCoverLetterEvaluation(null);
                setEvaluationError(null);
                toast({
                    variant: "destructive",
@@ -219,7 +236,7 @@ export default function Home() {
                    description: `An error occurred: ${errorMessage}. Please try again.`,
                    duration: 9000,
                });
-           } else { // Error during evaluation
+           } else {
                setCoverLetterEvaluation(null);
                setEvaluationError(`Evaluation failed: ${errorMessage}`);
                 toast({
@@ -230,18 +247,16 @@ export default function Home() {
                 });
            }
        } finally {
-           setIsCreatingCoverLetter(false); // Stop generation spinner
-           setIsEvaluatingCoverLetter(false); // Stop evaluation spinner
+           setIsCreatingCoverLetter(false);
+           setIsEvaluatingCoverLetter(false);
            setIsProcessingInput(false);
        }
    };
 
-  // Helper to scroll to the upload section
   const scrollToUpload = () => {
     uploadSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Helper to determine if any result section is potentially visible
   const shouldShowAnyResult =
     analysisResult || isAnalyzing || analysisError ||
     generatedCvMarkdown || isCreatingCv || creationError ||
@@ -251,7 +266,6 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center bg-background text-foreground">
 
-      {/* --- Hero Section --- */}
       <section className="w-full bg-gradient-to-b from-blue-50 to-background pt-16 md:pt-24 lg:pt-32 pb-8 md:pb-12 lg:pb-16 text-center">
         <div className="container mx-auto px-4 md:px-6">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary mb-4">
@@ -265,23 +279,20 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- Upload Section --- */}
       <section ref={uploadSectionRef} className="w-full max-w-6xl mx-auto pt-8 md:pt-12 lg:pt-16 pb-12 md:pb-16 lg:pb-20 px-4 md:px-6">
         <h2 className="text-3xl font-bold text-center mb-10 text-foreground">
           Upload Your Documents
         </h2>
 
-        {/* Pass combined loading state to the form */}
         <CvOptimizerForm
           cvText={cvText}
           jobDescText={jobDescText}
           onCvTextChange={setCvText}
           onJobDescTextChange={setJobDescText}
-          isProcessingInput={isProcessingInput} // Pass the combined loading state
-          setIsProcessingInput={setIsProcessingInput} // Allow form to control its specific loading states (like PDF parsing)
+          isProcessingInput={isProcessingInput}
+          setIsProcessingInput={setIsProcessingInput}
         />
 
-        {/* Optional Job Title Input */}
         <div className="mt-8 max-w-lg mx-auto">
           <Label htmlFor="jobTitle" className="text-md font-semibold">Job Title (Optional)</Label>
           <Input
@@ -290,12 +301,11 @@ export default function Home() {
             placeholder="Enter the job title you're applying for"
             value={jobTitle}
             onChange={(e) => setJobTitle(e.target.value)}
-            disabled={isProcessingInput || isAnalyzing} // Disable while processing or analyzing
+            disabled={isProcessingInput || isAnalyzing}
             className="mt-2 bg-white"
           />
         </div>
 
-        {/* Analyze Documents Button */}
         <div className="text-center mt-10">
           <Button
             size="lg"
@@ -314,10 +324,8 @@ export default function Home() {
       </section>
 
 
-      {/* --- Results Section --- */}
       {shouldShowAnyResult && (
         <section className="w-full max-w-4xl mx-auto py-12 md:py-16 lg:py-20 px-4 md:px-6 space-y-8">
-          {/* Analysis Results */}
           {(analysisResult || isAnalyzing || analysisError) && (
             <Card className="shadow-lg">
                <CardHeader>
@@ -330,12 +338,11 @@ export default function Home() {
                   isLoading={isAnalyzing}
                   error={analysisError}
                 />
-                {/* Buttons moved inside the analysis results card if analysis is successful */}
-                 {analysisResult && !analysisError && !isAnalyzing && (
+                 {(analysisResult || (cvText && jobDescText)) && !analysisError && !isAnalyzing && ( // Allow actions if analysis exists OR if base texts exist
                     <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
                        <Button
                             onClick={handleCreateTailoredCv}
-                            disabled={isProcessingInput || isCreatingCv}
+                            disabled={isProcessingInput || isCreatingCv || (!cvText || cvText.trim().length < 50) || (!jobDescText || jobDescText.trim().length < 50) }
                             className="bg-primary hover:bg-primary/90 text-primary-foreground"
                         >
                             {isCreatingCv ? (
@@ -346,7 +353,7 @@ export default function Home() {
                         </Button>
                         <Button
                             onClick={handleCreateCoverLetter}
-                            disabled={isProcessingInput || isCreatingCoverLetter || isEvaluatingCoverLetter}
+                            disabled={isProcessingInput || isCreatingCoverLetter || isEvaluatingCoverLetter || !analysisResult} // Cover letter requires analysis
                             className="bg-secondary hover:bg-secondary/90 text-secondary-foreground"
                         >
                              {isCreatingCoverLetter ? (
@@ -363,7 +370,6 @@ export default function Home() {
             </Card>
           )}
 
-          {/* Generated CV Display */}
           {(generatedCvMarkdown || isCreatingCv || creationError) && (
              <GeneratedCvDisplay
               cvMarkdown={generatedCvMarkdown}
@@ -372,20 +378,18 @@ export default function Home() {
              />
           )}
 
-          {/* Generated Cover Letter Display */}
            {(generatedCoverLetter || isCreatingCoverLetter || coverLetterError) && (
              <GeneratedCoverLetterDisplay
               coverLetterText={generatedCoverLetter}
-              isLoading={isCreatingCoverLetter} // Only show loading during generation phase
+              isLoading={isCreatingCoverLetter}
               error={coverLetterError}
              />
            )}
 
-           {/* Cover Letter Evaluation Results */}
            {(coverLetterEvaluation || isEvaluatingCoverLetter || evaluationError) && (
               <CoverLetterEvaluationResults
                 result={coverLetterEvaluation}
-                isLoading={isEvaluatingCoverLetter} // Show loading only during evaluation phase
+                isLoading={isEvaluatingCoverLetter}
                 error={evaluationError}
               />
             )}
@@ -395,3 +399,4 @@ export default function Home() {
     </main>
   );
 }
+
