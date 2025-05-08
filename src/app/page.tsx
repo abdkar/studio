@@ -16,7 +16,7 @@ import { evaluateCoverLetter, type EvaluateCoverLetterOutput } from '@/ai/flows/
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, FileCheck2, Mail, RefreshCw } from 'lucide-react';
+import { Loader2, FileCheck2, Mail, RefreshCw, UploadCloud, SearchCheck, FileText } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -343,8 +343,59 @@ export default function Home() {
           <Button size="lg" onClick={scrollToUpload}>Get Started</Button>
         </div>
       </section>
+      
+      {/* How It Works Section */}
+      <section className="w-full bg-secondary py-12 md:py-16 lg:py-20">
+        <div className="container mx-auto px-4 md:px-6">
+          <h2 className="text-3xl font-bold text-center mb-10 text-foreground">
+            How It Works
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Card className="text-center shadow-lg">
+              <CardHeader>
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-4">
+                  <UploadCloud className="h-8 w-8 text-primary" />
+                </div>
+                <CardTitle className="text-xl">Upload Your Documents</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Upload your current CV (PDF, TXT, or Word) and the job description you're interested in.
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="text-center shadow-lg">
+              <CardHeader>
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-4">
+                  <SearchCheck className="h-8 w-8 text-primary" />
+                </div>
+                <CardTitle className="text-xl">Analyze & Compare</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Our system analyzes your CV against the job requirements to identify matches, gaps, and areas for improvement.
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="text-center shadow-lg">
+              <CardHeader>
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-4">
+                  <FileText className="h-8 w-8 text-primary" />
+                </div>
+                <CardTitle className="text-xl">Generate Optimized Content</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Get an improved, ATS-friendly CV and a tailored cover letter based on the in-depth analysis.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
 
-      <section ref={uploadSectionRef} className="w-full max-w-6xl mx-auto pt-8 md:pt-12 lg:pt-16 pb-12 md:pb-16 px-4 md:px-6"> {/* Reduced bottom padding */}
+
+      <section ref={uploadSectionRef} className="w-full max-w-6xl mx-auto pt-12 md:pt-16 lg:pt-20 pb-8 md:pb-12 px-4 md:px-6"> {/* Adjusted padding */}
         <h2 className="text-3xl font-bold text-center mb-10 text-foreground">
           Upload Your Documents
         </h2>
@@ -467,3 +518,4 @@ export default function Home() {
     </main>
   );
 }
+
