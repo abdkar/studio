@@ -19,12 +19,12 @@ Here are some screenshots to help you visualize the user experience of the app:
 
 Here is the screen to upload your CV and the job description:
 
-![Upload Documents](https://i.imgur.com/screenshot1.png)
+![Upload CV Screenshot](screenshots/app_2.png)
 
 ### How it works
 
 Here's how the app will work:
-![How it works](https://i.imgur.com/screenshot2.png)
+![How it works](screenshots/app_1.png)
 ## Key Capabilities
 
 Firebase Studio offers the following core functionalities:
