@@ -1,5 +1,6 @@
 'use server';
 
+import pdf from 'pdf-parse'; // Static import for pdf-parse
 import { z } from 'zod';
 
 const PdfParseResultSchema = z.object({
@@ -15,7 +16,7 @@ const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 /**
  * Parses a PDF file from FormData and extracts its text content.
- * Uses dynamic import for pdf-parse and robust error handling.
+ * Uses static import for pdf-parse and robust error handling.
  * @param formData The FormData containing the PDF file under the key 'pdfFile'.
  * @returns An object containing the success status, extracted text, or an error message.
  */
@@ -42,46 +43,38 @@ export async function parsePdfAction(formData: FormData): Promise<PdfParseResult
    }
 
   try {
-    // Dynamically import pdf-parse
-    console.log('[parsePdfAction] Attempting to dynamically import pdf-parse...');
-    const pdfParseModule = await import('pdf-parse');
-    console.log('[parsePdfAction] pdf-parse module imported. Type:', typeof pdfParseModule, 'Keys:', pdfParseModule ? Object.keys(pdfParseModule) : 'null');
-
-    let pdfParserFn;
-    if (typeof pdfParseModule.default === 'function') {
-        pdfParserFn = pdfParseModule.default;
-        console.log('[parsePdfAction] Using pdfParseModule.default as the parser function.');
-    } else if (typeof pdfParseModule === 'function') {
-        // This case might occur if the module is directly the function (e.g. CJS style imported via ESM import)
-        pdfParserFn = pdfParseModule;
-        console.log('[parsePdfAction] Using the imported module itself as the parser function.');
-    } else {
-        console.error('[parsePdfAction] pdf-parse module or its default export is not a function.', pdfParseModule);
-        // This error will be caught by the outer catch block
-        throw new Error('PDF parsing library (pdf-parse) could not be loaded correctly.');
-    }
-
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    console.log(`[parsePdfAction] Parsing PDF: ${file.name}, Buffer size: ${buffer.length} bytes with the resolved parser function.`);
+    console.log(`[parsePdfAction] Parsing PDF: ${file.name}, Buffer size: ${buffer.length} bytes with static parser function.`);
+    console.log(`[parsePdfAction] CWD (current working directory) on server: ${process.cwd()}`);
+
 
     let data;
     try {
-        data = await pdfParserFn(buffer);
+        // Use the statically imported pdf function directly
+        data = await pdf(buffer);
     } catch (parseError) {
          // Log the raw error object to the server console for detailed diagnostics
          console.error(`[parsePdfAction] Error *during* actual PDF parsing execution for file ${file.name}. Type of error: ${typeof parseError}, Error object:`, parseError);
 
          let clientFriendlyMessage = 'PDF parsing failed internally. The file might be corrupted, password-protected, or incompatible with the parser.';
          if (parseError instanceof Error) {
-             clientFriendlyMessage = `PDF parsing error: ${parseError.message}. Please check if the file is valid.`;
+            if (parseError.message.includes('ENOENT') && parseError.message.includes('test/data')) {
+                clientFriendlyMessage = 'PDF parsing library failed: it seems to be trying to access internal test files. This often indicates an issue with the library setup in the current server environment, possibly related to its native dependencies. Check server logs for the exact path.';
+                console.error(`[parsePdfAction] Critical: pdf-parse is attempting to access its own test data files (path likely similar to './test/data/...'). This indicates a deeper configuration or environment compatibility issue with pdf-parse or its native dependencies (like pdftotext). Raw error: ${parseError.message}`);
+            } else if (parseError.message.includes('ENOENT')) {
+                clientFriendlyMessage = 'PDF parsing library encountered an unexpected file system issue during parsing. Check server logs.';
+            } else {
+                // Truncate potentially long messages from the library
+                const truncatedMessage = parseError.message.length > 200 ? parseError.message.substring(0, 200) + '...' : parseError.message;
+                clientFriendlyMessage = `PDF parsing error: ${truncatedMessage}. Please check if the file is valid.`;
+            }
          } else if (typeof parseError === 'string') {
              clientFriendlyMessage = `PDF parsing error: ${parseError}. Please check if the file is valid.`;
          } else if (parseError && typeof (parseError as any).message === 'string') {
              clientFriendlyMessage = `PDF parsing error: ${(parseError as any).message}. Please check if the file is valid.`;
          }
-         // If it's none of the above, the generic message set initially is used.
          return { success: false, error: clientFriendlyMessage };
     }
 
@@ -90,25 +83,29 @@ export async function parsePdfAction(formData: FormData): Promise<PdfParseResult
     const extractedText = data.text?.trim() ?? '';
     if (extractedText.length === 0) {
         console.warn(`[parsePdfAction] PDF parsing resulted in empty or whitespace-only text. File: ${file.name}, Pages: ${data.numpages}`);
+        // Check if the PDF actually had pages; if numpages is 0, it's more likely an invalid PDF.
+        if (data.numpages === 0) {
+            return { success: false, text: '', error: 'PDF parsed, but it appears to have no pages or is invalid. Please check the file.' };
+        }
         return { success: true, text: '', error: 'PDF parsed, but no text content was extracted. The PDF might be image-based, empty, or password-protected.' };
     }
 
     console.log(`[parsePdfAction] Successfully extracted text (trimmed length: ${extractedText.length}). Returning success.`);
     return { success: true, text: extractedText };
-  } catch (error) {
+
+  } catch (error) { // Outer catch for issues like buffer conversion or library loading
     console.error('[parsePdfAction] Error during PDF parsing process (outer catch):', error);
 
     let clientErrorMessage = 'PDF parsing failed due to an unexpected server error.';
     if (error instanceof Error) {
-        if (error.message.includes('pdf-parse module could not be loaded') || error.message.includes('PDF parsing library (pdf-parse) could not be loaded correctly')) {
-          clientErrorMessage = 'Failed to load the PDF parsing library on the server. Please contact support.';
-        } else if (error.message.includes('ENOENT')) {
-          clientErrorMessage = 'PDF parsing library encountered an file system issue. Check server logs.';
+        // Check for ENOENT here if it bubbles up to the outer catch
+        if (error.message.includes('ENOENT')) {
+          clientErrorMessage = 'PDF parsing library encountered a file system issue (outer catch). Check server logs.';
         } else {
           const limitedMessage = error.message.substring(0, 150) + (error.message.length > 150 ? '...' : '');
           clientErrorMessage = `PDF processing error: ${limitedMessage}. Please try again or use a different file.`;
         }
-         console.error(`[parsePdfAction] Caught specific error type: ${error.name}, Message: ${error.message}`);
+         console.error(`[parsePdfAction] Caught specific error type in outer catch: ${error.name}, Message: ${error.message}`);
     } else {
         console.error('[parsePdfAction] Caught non-Error object during parsing process (outer catch):', error);
     }
